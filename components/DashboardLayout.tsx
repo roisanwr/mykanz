@@ -1,7 +1,7 @@
 // components/DashboardLayout.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { logOut } from '@/actions/auth.actions'
@@ -29,8 +29,38 @@ export default function DashboardLayout({ children, user }: { children: React.Re
   const userName = user?.name || 'Sultan'
   const userInitials = userName.charAt(0).toUpperCase()
 
+  // ==========================================
+  // FITUR DARK MODE SPESIAL SPARKY 🦇
+  // ==========================================
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Cek tema saat komponen pertama kali dimuat (anti reset pas refresh!)
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    
+    // Kalau sebelumnya user milih dark, ATAU belum pernah milih tapi sistem OS-nya dark
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      document.documentElement.classList.add('dark')
+      setIsDarkMode(true)
+    } else {
+      document.documentElement.classList.remove('dark')
+      setIsDarkMode(false)
+    }
+  }, [])
+
+  // Fungsi toggle yang langsung menyimpan pilihan ke Browser Storage
   const toggleDarkMode = () => {
-    document.documentElement.classList.toggle('dark')
+    const html = document.documentElement
+    if (isDarkMode) {
+      html.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+      setIsDarkMode(false)
+    } else {
+      html.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+      setIsDarkMode(true)
+    }
   }
 
   return (

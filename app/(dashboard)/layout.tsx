@@ -1,19 +1,9 @@
-export default function DashboardLayout({
+// app/(dashboard)/layout.tsx
+export default function DashboardRouteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex gap-4">
-      {/* Sidebar di sini */}
-      <aside className="w-64">
-        {/* Navigation menu */}
-      </aside>
-      {/* Main content */}
-      <main className="flex-1">
-        {/* Navbar di sini */}
-        {children}
-      </main>
-    </div>
-  );
+  // Hanya me-return children karena Layout Utama sudah di-handle di app/layout.tsx
+  return <>{children}</>;
 }

@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tema Kustom Kanz */
+@theme {
+  --color-primary-50: #fff7ed;
+  --color-primary-100: #ffedd5;
+  --color-primary-200: #fed7aa;
+  --color-primary-300: #fdba74;
+  --color-primary-400: #fb923c;
+  --color-primary-500: #f97316;
+  --color-primary-600: #ea580c;
+  --color-primary-700: #c2410c;
+  --color-primary-800: #9a3412;
+  --color-primary-900: #7c2d12;
+
+  --color-wealth-50: #f0fdf4;
+  --color-wealth-100: #dcfce7;
+  --color-wealth-200: #bbf7d0;
+  --color-wealth-300: #86efac;
+  --color-wealth-400: #4ade80;
+  --color-wealth-500: #22c55e;
+  --color-wealth-600: #16a34a;
+  --color-wealth-700: #15803d;
+  --color-wealth-800: #166534;
+  --color-wealth-900: #14532d;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* Base Styles & Custom Utilities */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --jarak-atas-header: 12px;
+    --jarak-kiri-kanan: 16px;
+    --jarak-bawah: 12px;
+    --lebar-sidebar: 260px;
+    --jarak-antar-elemen: 20px;
+    --lengkung-kotak: 16px;
+  }
+  
+  body {
+    @apply bg-[#f4f6f8] text-gray-800 font-sans transition-colors duration-300 h-screen overflow-hidden flex flex-col;
+  }
+  
+  /* Dark mode class untuk body */
+  .dark body {
+    @apply bg-[#0f172a] text-gray-100;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .sudut-custom {
+    border-radius: var(--lengkung-kotak) !important;
+  }
+
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .card-hover:hover {
+    transform: translateY(-4px) scale(1.01);
+  }
+
+  .glow-orange-hover:hover {
+    box-shadow: 0 10px 25px -5px rgba(249, 115, 22, 0.3), 0 8px 10px -6px rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.3);
+  }
+
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Perlu target manual buat dark mode kalau pake utility class */
+  :is(.dark .glass-panel) {
+    background: rgba(30, 41, 59, 0.7);
+  }
 }
+
+/* Animasi Keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Scrollbar Custom */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+:is(.dark ::-webkit-scrollbar-thumb) { background: #334155; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }

@@ -65,7 +65,7 @@ CREATE TABLE fiat_transactions (
 );
 
 -- ==========================================
--- 3. FITUR MYDUITGUA (BUDGET & GOALS)
+-- 3. FITUR (BUDGET & GOALS)
 -- ==========================================
 CREATE TABLE budgets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -257,3 +257,10 @@ CREATE INDEX idx_fiat_tx_user_date ON fiat_transactions(user_id, transaction_dat
 CREATE INDEX idx_fiat_tx_wallet ON fiat_transactions(wallet_id);
 CREATE INDEX idx_asset_tx_portfolio ON asset_transactions(portfolio_id);
 CREATE INDEX idx_budgets_user_date ON budgets(user_id, start_date, end_date);
+
+
+
+npx prisma db pull
+
+
+npx prisma generate

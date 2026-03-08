@@ -1,14 +1,212 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../app/generated/prisma"
+  provider        = "prisma-client-js"
+  output          = "../app/generated/prisma"
+  previewFeatures = ["partialIndexes"]
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model asset_transactions {
+  id                         String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                    String             @db.Uuid
+  portfolio_id               String             @db.Uuid
+  transaction_type           asset_tx_type
+  units                      Decimal            @db.Decimal(18, 8)
+  price_per_unit             Decimal            @db.Decimal(18, 2)
+  total_amount               Decimal            @db.Decimal(18, 2)
+  linked_fiat_transaction_id String?            @db.Uuid
+  notes                      String?
+  transaction_date           DateTime?          @default(now()) @db.Timestamptz(6)
+  created_at                 DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime?          @default(now()) @db.Timestamptz(6)
+  fiat_transactions          fiat_transactions? @relation(fields: [linked_fiat_transaction_id], references: [id], onUpdate: NoAction)
+  user_portfolios            user_portfolios    @relation(fields: [portfolio_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                      users              @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([portfolio_id], map: "idx_asset_tx_portfolio")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model asset_valuations {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  asset_id       String           @db.Uuid
+  price_per_unit Decimal          @db.Decimal(18, 8)
+  source         valuation_source
+  recorded_at    DateTime?        @default(now()) @db.Timestamptz(6)
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  assets         assets           @relation(fields: [asset_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([asset_id, recorded_at])
+}
+
+model assets {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id          String?            @db.Uuid
+  name             String             @db.VarChar(255)
+  asset_type       asset_type
+  ticker_symbol    String?            @db.VarChar(50)
+  unit_name        String?            @default("unit") @db.VarChar(50)
+  currency         String             @default("IDR") @db.VarChar(10)
+  price_source     valuation_source?  @default(MANUAL)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  asset_valuations asset_valuations[]
+  users            users?             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_portfolios  user_portfolios[]
+
+  @@unique([asset_type, ticker_symbol], map: "idx_unique_global_assets", where: raw("(user_id IS NULL)"))
+  @@unique([user_id, asset_type, ticker_symbol], map: "idx_unique_user_assets", where: raw("(user_id IS NOT NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model budgets {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String      @db.Uuid
+  category_id String?     @db.Uuid
+  amount      Decimal     @db.Decimal(18, 2)
+  period      String      @db.VarChar(20)
+  start_date  DateTime    @db.Timestamptz(6)
+  end_date    DateTime    @db.Timestamptz(6)
+  created_at  DateTime?   @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
+  categories  categories? @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users       users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, start_date, end_date], map: "idx_budgets_user_date")
+}
+
+model categories {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String              @db.Uuid
+  name              String              @db.VarChar(100)
+  type              fiat_tx_type
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  budgets           budgets[]
+  users             users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fiat_transactions fiat_transactions[]
+
+  @@unique([user_id, name, type])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fiat_transactions {
+  id                                              String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                                         String               @db.Uuid
+  wallet_id                                       String               @db.Uuid
+  category_id                                     String?              @db.Uuid
+  to_wallet_id                                    String?              @db.Uuid
+  transaction_type                                fiat_tx_type
+  amount                                          Decimal              @db.Decimal(18, 2)
+  exchange_rate                                   Decimal?             @default(1.0) @db.Decimal(18, 6)
+  description                                     String?
+  transaction_date                                DateTime?            @default(now()) @db.Timestamptz(6)
+  created_at                                      DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at                                      DateTime?            @default(now()) @db.Timestamptz(6)
+  asset_transactions                              asset_transactions[]
+  categories                                      categories?          @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  wallets_fiat_transactions_to_wallet_idTowallets wallets?             @relation("fiat_transactions_to_wallet_idTowallets", fields: [to_wallet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                                           users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  wallets_fiat_transactions_wallet_idTowallets    wallets              @relation("fiat_transactions_wallet_idTowallets", fields: [wallet_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([user_id, transaction_date], map: "idx_fiat_tx_user_date")
+  @@index([wallet_id], map: "idx_fiat_tx_wallet")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model goals {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String    @db.Uuid
+  name           String    @db.VarChar(255)
+  target_amount  Decimal   @db.Decimal(18, 2)
+  current_amount Decimal?  @default(0) @db.Decimal(18, 2)
+  deadline       DateTime? @db.Timestamptz(6)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model user_portfolios {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String               @db.Uuid
+  asset_id           String               @db.Uuid
+  total_units        Decimal?             @default(0) @db.Decimal(18, 8)
+  average_buy_price  Decimal?             @default(0) @db.Decimal(18, 2)
+  opened_at          DateTime?            @default(now()) @db.Timestamptz(6)
+  closed_at          DateTime?            @db.Timestamptz(6)
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  asset_transactions asset_transactions[]
+  assets             assets               @relation(fields: [asset_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users                @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, asset_id])
+}
+
+model users {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String?              @db.VarChar(255)
+  email              String?              @unique
+  password_hash      String?
+  image              String?
+  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
+  asset_transactions asset_transactions[]
+  assets             assets[]
+  budgets            budgets[]
+  categories         categories[]
+  fiat_transactions  fiat_transactions[]
+  goals              goals[]
+  user_portfolios    user_portfolios[]
+  wallets            wallets[]
+}
+
+model wallets {
+  id                                                        String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                                                   String              @db.Uuid
+  name                                                      String              @db.VarChar(255)
+  type                                                      wallet_type
+  currency                                                  String              @default("IDR") @db.VarChar(10)
+  deleted_at                                                DateTime?           @db.Timestamptz(6)
+  created_at                                                DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at                                                DateTime?           @default(now()) @db.Timestamptz(6)
+  fiat_transactions_fiat_transactions_to_wallet_idTowallets fiat_transactions[] @relation("fiat_transactions_to_wallet_idTowallets")
+  fiat_transactions_fiat_transactions_wallet_idTowallets    fiat_transactions[] @relation("fiat_transactions_wallet_idTowallets")
+  users                                                     users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum asset_tx_type {
+  BELI
+  JUAL
+  SALDO_AWAL
+}
+
+enum asset_type {
+  KRIPTO
+  SAHAM
+  LOGAM_MULIA
+  PROPERTI
+  BISNIS
+  LAINNYA
+}
+
+enum fiat_tx_type {
+  PEMASUKAN
+  PENGELUARAN
+  TRANSFER
+}
+
+enum valuation_source {
+  MANUAL
+  API
+}
+
+enum wallet_type {
+  TUNAI
+  BANK
+  DOMPET_DIGITAL
 }

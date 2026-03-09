@@ -85,3 +85,52 @@ export async function deleteCategory(id: string) {
     return { error: 'Gagal menghapus kategori.' };
   }
 }
+
+export async function getCategoryHistory(categoryId: string, startDate?: string, endDate?: string) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { error: 'Akses ditolak.', data: [] };
+
+    // Validasi apakah kategori ini milik user (atau admin bisa bypass jika ada role)
+    const category = await prisma.categories.findFirst({
+      where: { id: categoryId, user_id: session.user.id }
+    });
+
+    if (!category) {
+      return { error: 'Kategori tidak ditemukan!', data: [] };
+    }
+
+    const whereClause: any = {
+      user_id: session.user.id,
+      category_id: categoryId,
+    };
+
+    // Filter tanggal (Default: semua history jika tidak diisi)
+    if (startDate || endDate) {
+      whereClause.transaction_date = {};
+      
+      if (startDate) {
+        // Start of day
+        whereClause.transaction_date.gte = new Date(`${startDate}T00:00:00.000Z`);
+      }
+      
+      if (endDate) {
+        // End of day
+        whereClause.transaction_date.lte = new Date(`${endDate}T23:59:59.999Z`);
+      }
+    }
+
+    const transactions = await prisma.fiat_transactions.findMany({
+      where: whereClause,
+      orderBy: { transaction_date: 'desc' },
+      include: {
+        wallets_fiat_transactions_wallet_idTowallets: { select: { name: true, currency: true } },
+      }
+    });
+
+    return { success: true, data: transactions, categoryName: category.name };
+  } catch (error) {
+    console.error("Gagal fetch histori kategori:", error);
+    return { error: 'Terjadi kesalahan sistem.', data: [] };
+  }
+}

@@ -8,15 +8,33 @@ import { logOut } from '@/actions/auth.actions'
 import { 
   Menu, Bitcoin, Moon, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
-  LogOut, User as UserIcon, X, ArrowRightLeft, Tags
+  LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown
 } from 'lucide-react'
 
-const MENU_ITEMS = [
+// Define a type for menu items to fix TS errors
+type MenuItem = {
+  name: string
+  path?: string // Optional because parents might not have a direct path
+  icon: React.ElementType
+  badge?: string
+  subItems?: { name: string, path: string }[]
+}
+
+const MENU_ITEMS: MenuItem[] = [
   { name: 'Ringkasan', path: '/', icon: LayoutDashboard },
   { name: 'Dompet & Kas', path: '/wallets', icon: Wallet },
   { name: 'Transaksi', path: '/transactions', icon: ArrowRightLeft },
   { name: 'Kategori', path: '/categories', icon: Tags },
-  { name: 'Portofolio', path: '/portfolios', icon: Rocket, badge: 'DCA' },
+  { 
+    name: 'Portofolio', 
+    icon: Rocket, 
+    badge: 'DCA',
+    subItems: [
+      { name: 'Portofolio Saya', path: '/portfolios' },
+      { name: 'Data Aset', path: '/portfolios/assets' },
+      { name: 'Investasi', path: '/portfolios/transactions' }
+    ]
+  },
   { name: 'Target Impian', path: '/goals', icon: Target },
   { name: 'Anggaran', path: '/budgets', icon: PieChart },
 ]
@@ -27,6 +45,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false) 
   const [isProfileOpen, setIsProfileOpen] = useState(false) 
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({})
 
   const userName = user?.name || 'Sultan'
   const userInitials = userName.charAt(0).toUpperCase()
@@ -63,6 +82,13 @@ export default function DashboardLayout({ children, user }: { children: React.Re
       localStorage.setItem('theme', 'dark')
       setIsDarkMode(true)
     }
+  }
+
+  const toggleMenu = (name: string) => {
+    setOpenMenus(prev => ({
+      ...prev,
+      [name]: !prev[name]
+    }))
   }
 
   return (
@@ -181,10 +207,69 @@ export default function DashboardLayout({ children, user }: { children: React.Re
               
               <ul className="space-y-1.5">
                 {MENU_ITEMS.map((item) => {
+                  const Icon = item.icon
+                  
+                  if (item.subItems) {
+                    const isOpen = openMenus[item.name]
+                    
+                    return (
+                      <li key={item.name}>
+                        <button
+                          onClick={() => toggleMenu(item.name)}
+                          className={`w-full flex items-center justify-between px-3 py-3 rounded-xl font-semibold transition-all group relative overflow-hidden
+                            ${isOpen ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-orange-600'}
+                          `}
+                        >
+                          {isOpen && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-orange-500 rounded-r-full"></div>
+                          )}
+                          <div className="flex items-center">
+                            <Icon className={`w-5 h-5 mr-3 relative z-10 ${isOpen ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
+                            <span className="relative z-10">{item.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {item.badge && (
+                              <span className="ml-auto bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-400 py-0.5 px-2 rounded-md text-[10px] font-bold">
+                                {item.badge}
+                              </span>
+                            )}
+                            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+                        
+                        <div 
+                          className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
+                        >
+                           <div className="pl-10 pr-2 space-y-1 py-1">
+                             {item.subItems.map(subItem => {
+                               // Fix bug: only exactly match the path to avoid /portfolios/transactions highlighting /portfolios too.
+                               const isSubActive = pathname === subItem.path
+                               return (
+                                 <Link
+                                   key={subItem.path}
+                                   href={subItem.path}
+                                   onClick={() => setIsMobileMenuOpen(false)}
+                                   className={`block px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                                     isSubActive 
+                                       ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' 
+                                       : 'text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                                   }`}
+                                 >
+                                   {subItem.name}
+                                 </Link>
+                               )
+                             })}
+                           </div>
+                        </div>
+                      </li>
+                    )
+                  }
+
+                  // Normal Link rendering (No SubItems)
                   const isActive = pathname === item.path
                   return (
                     <li key={item.path}>
-                      <Link href={item.path} onClick={() => setIsMobileMenuOpen(false)}
+                      <Link href={item.path as string} onClick={() => setIsMobileMenuOpen(false)}
                         className={`flex items-center px-3 py-3 rounded-xl font-semibold transition-all group relative overflow-hidden
                           ${isActive 
                             ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' 
@@ -196,7 +281,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-orange-500 rounded-r-full"></div>
                         )}
                         
-                        <item.icon className={`w-5 h-5 mr-3 relative z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
+                        <Icon className={`w-5 h-5 mr-3 relative z-10 ${isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'}`} />
                         
                         <span className="relative z-10">{item.name}</span>
                         {item.badge && (

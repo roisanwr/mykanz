@@ -12,9 +12,14 @@ export async function createTransaction(formData: FormData) {
 
     const transaction_type = formData.get('transaction_type') as fiat_tx_type;
     const wallet_id = formData.get('wallet_id') as string;
+    
+    // Parse amount, removing all non-digit characters to support '500.000' format
     const amountStr = formData.get('amount') as string;
-    const amount = amountStr ? parseFloat(amountStr) : 0;
+    const amount = amountStr ? parseFloat(amountStr.replace(/\D/g, '')) : 0;
+    
     const description = formData.get('description') as string || null;
+    const txDateStr = formData.get('transaction_date') as string;
+    const transaction_date = txDateStr ? new Date(`${txDateStr}T00:00:00.000Z`) : undefined;
     
     if (!transaction_type || !wallet_id || amount <= 0) {
       return { error: 'Data tidak lengkap atau jumlah tidak valid!' };
@@ -26,6 +31,7 @@ export async function createTransaction(formData: FormData) {
       wallet_id,
       amount,
       description,
+      ...(transaction_date && { transaction_date })
     };
 
     if (transaction_type === 'TRANSFER') {
@@ -34,15 +40,50 @@ export async function createTransaction(formData: FormData) {
         return { error: 'Dompet tujuan tidak valid!' };
       }
       payload.to_wallet_id = to_wallet_id;
+      
+      // Handle Admin Fee
+      const adminFeeStr = formData.get('admin_fee') as string;
+      const admin_fee = adminFeeStr ? parseFloat(adminFeeStr.replace(/\D/g, '')) : 0;
+      
+      const PrismaOperations = [];
+      PrismaOperations.push(prisma.fiat_transactions.create({ data: payload }));
+      
+      if (admin_fee > 0) {
+        // Find or create "Biaya Admin" category
+        let adminCat = await prisma.categories.findFirst({
+          where: { user_id: session.user.id, name: 'Biaya Admin', type: 'PENGELUARAN' }
+        });
+        
+        if (!adminCat) {
+          adminCat = await prisma.categories.create({
+            data: { user_id: session.user.id, name: 'Biaya Admin', type: 'PENGELUARAN' }
+          });
+        }
+        
+        PrismaOperations.push(prisma.fiat_transactions.create({
+          data: {
+            user_id: session.user.id,
+            transaction_type: 'PENGELUARAN',
+            wallet_id: wallet_id,
+            category_id: adminCat.id,
+            amount: admin_fee,
+            description: `Biaya Admin Transfer ${description ? ' - ' + description : ''}`,
+            ...(transaction_date && { transaction_date })
+          }
+        }));
+      }
+      
+      await prisma.$transaction(PrismaOperations);
+      
     } else {
       const category_id = formData.get('category_id') as string;
       if (category_id) {
         payload.category_id = category_id;
       }
+      await prisma.fiat_transactions.create({ data: payload });
     }
 
-    await prisma.fiat_transactions.create({ data: payload });
-
+    revalidatePath('/categories'); 
     revalidatePath('/transactions');
     revalidatePath('/wallets'); // Update wallet balances immediately!
     return { success: true };

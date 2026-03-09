@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, X, ArrowRightLeft, TrendingUp, TrendingDown, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Plus, X, ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Calendar } from 'lucide-react';
 import { createTransaction } from '@/actions/transaction.actions';
 import { useFeedback } from '@/components/FeedbackProvider';
 
@@ -16,10 +16,31 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
   const [sourceWalletId, setSourceWalletId] = useState(wallets[0]?.id || '');
   const [destWalletId, setDestWalletId] = useState(wallets.length > 1 ? wallets[1]?.id : '');
   
+  // Formatted Inputs
+  const [amountInput, setAmountInput] = useState('');
+  const [adminFeeInput, setAdminFeeInput] = useState('');
+  
+  // Custom Date (Default is Today YYYY-MM-DD local time)
+  const [txDate, setTxDate] = useState(() => {
+    const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(Date.now() - tzOffset)).toISOString().slice(0, -1);
+    return localISOTime.split('T')[0];
+  });
+  
   const { showFeedback } = useFeedback();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  const handleFormatChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string>>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    if (!rawValue) {
+      setter('');
+      return;
+    }
+    const formatted = new Intl.NumberFormat('id-ID').format(Number(rawValue));
+    setter(formatted);
+  };
 
   const handleSubmit = async (formData: FormData) => {
     setIsLoading(true);
@@ -43,6 +64,8 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
       
       // Reset form on success
       setTxType('PENGELUARAN');
+      setAmountInput('');
+      setAdminFeeInput('');
     }
   };
 
@@ -110,6 +133,26 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
                 >
                   <ArrowRightLeft className="w-4 h-4" /> Transfer
                 </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* TANGGAL TRANSAKSI */}
+              <div className="md:col-span-2">
+                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Tanggal Transaksi
+                 </label>
+                 <div className="relative">
+                   <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                   <input 
+                     type="date" 
+                     name="transaction_date" 
+                     value={txDate}
+                     onChange={(e) => setTxDate(e.target.value)}
+                     required
+                     className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 font-medium"
+                   />
+                 </div>
               </div>
             </div>
 
@@ -192,7 +235,7 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
               </div>
             )}
 
-            {/* JUMLAH */}
+            {/* JUMLAH UTAMA */}
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Jumlah Uang
@@ -200,16 +243,40 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">Rp</span>
                 <input 
-                  type="number" 
+                  type="text" 
                   name="amount" 
+                  value={amountInput}
+                  onChange={(e) => handleFormatChange(e, setAmountInput)}
                   required
-                  min="1"
-                  step="any"
                   placeholder="0" 
                   className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-xl font-black"
                 />
               </div>
             </div>
+
+            {/* BIAYA ADMIN (Khusus Transfer) */}
+            {txType === 'TRANSFER' && (
+              <div>
+                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  Biaya Admin / Potongan
+                  <span className="text-xs font-normal text-slate-500">(Opsional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">Rp</span>
+                  <input 
+                    type="text" 
+                    name="admin_fee" 
+                    value={adminFeeInput}
+                    onChange={(e) => handleFormatChange(e, setAdminFeeInput)}
+                    placeholder="0" 
+                    className="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1.5 italic">
+                  Biaya admin akan otomatis dicatat sebagai Pengeluaran dari Dompet Asal.
+                </p>
+              </div>
+            )}
 
             {/* DESKRIPSI (Opsional) */}
             <div>

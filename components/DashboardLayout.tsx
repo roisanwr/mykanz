@@ -8,12 +8,14 @@ import { logOut } from '@/actions/auth.actions'
 import { 
   Menu, Bitcoin, Moon, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
-  LogOut, User as UserIcon, X
+  LogOut, User as UserIcon, X, ArrowRightLeft, Tags
 } from 'lucide-react'
 
 const MENU_ITEMS = [
   { name: 'Ringkasan', path: '/', icon: LayoutDashboard },
   { name: 'Dompet & Kas', path: '/wallets', icon: Wallet },
+  { name: 'Transaksi', path: '/transactions', icon: ArrowRightLeft },
+  { name: 'Kategori', path: '/categories', icon: Tags },
   { name: 'Portofolio', path: '/portfolios', icon: Rocket, badge: 'DCA' },
   { name: 'Target Impian', path: '/goals', icon: Target },
   { name: 'Anggaran', path: '/budgets', icon: PieChart },

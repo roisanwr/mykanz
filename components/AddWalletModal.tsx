@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom'; // JURUS SAKTI PORTAL!
 import { Plus, X, Wallet, Banknote, CreditCard, Smartphone } from 'lucide-react';
 import { createWallet } from '@/actions/wallet.actions';
+import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddWalletModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +14,9 @@ export default function AddWalletModal() {
   // State baru untuk memantau jenis mata uang yang dipilih
   const [currencySelection, setCurrencySelection] = useState('IDR');
   
+  // Provider Animasi Feedback
+  const { showFeedback } = useFeedback();
+
   // State ini penting di Next.js agar Portal tidak error saat SSR (Server-Side Rendering)
   const [mounted, setMounted] = useState(false);
 
@@ -28,8 +32,10 @@ export default function AddWalletModal() {
     
     if (result?.error) {
       setErrorMsg(result.error);
+      showFeedback(result.error, 'error');
       setIsLoading(false);
     } else {
+      showFeedback('Dompet berhasil dibuat!', 'success');
       setIsOpen(false);
       setIsLoading(false);
     }

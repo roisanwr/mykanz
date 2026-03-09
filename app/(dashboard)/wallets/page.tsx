@@ -34,7 +34,7 @@ export default async function WalletsPage() {
 
   // 2. Fetch Data Asli! 
   // Sparky pakai $queryRaw biar kita bisa Join tabel 'wallets' dengan View 'wallet_balances' buatanmu!
-  const walletsData = await prisma.$queryRaw<any[]>`
+  const walletsDataRaw = await prisma.$queryRaw<any[]>`
     SELECT 
       w.id, 
       w.name, 
@@ -46,9 +46,10 @@ export default async function WalletsPage() {
     WHERE w.user_id = ${session.user.id}::uuid AND w.deleted_at IS NULL
     ORDER BY w.created_at ASC
   `;
+  const walletsData = walletsDataRaw.map(w => ({ ...w, balance: Number(w.balance) }));
 
-  // 3. Kalkulasi Total (Data dari DB Decimal biasanya dikembalikan sebagai String/Object, jadi kita Parse ke Number)
-  const totalBalance = walletsData.reduce((acc, curr) => acc + Number(curr.balance), 0);
+  // 3. Kalkulasi Total
+  const totalBalance = walletsData.reduce((acc, curr) => acc + curr.balance, 0);
 
   return (
     <div className="space-y-6">
@@ -101,7 +102,7 @@ export default async function WalletsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
             {walletsData.map((wallet) => (
               <div 
                 key={wallet.id} 

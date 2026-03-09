@@ -72,7 +72,8 @@ export default async function TransactionsPage(props: {
   // Prisma Decimals to Numbers to fix NextJS server/client serialization warnings
   const transactions = transactionsRaw.map(tx => ({
     ...tx,
-    amount: Number(tx.amount)
+    amount: Number(tx.amount),
+    exchange_rate: tx.exchange_rate ? Number(tx.exchange_rate) : null
   }));
 
   // Calculate Simple Monthly Stats (Pemasukan vs Pengeluaran berdasarkan filter yang aktif)

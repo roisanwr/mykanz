@@ -54,6 +54,7 @@ model assets {
   updated_at       DateTime?          @default(now()) @db.Timestamptz(6)
   asset_valuations asset_valuations[]
   users            users?             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  goals            goals[]
   user_portfolios  user_portfolios[]
 
   @@unique([asset_type, ticker_symbol], map: "idx_unique_global_assets", where: raw("(user_id IS NULL)"))
@@ -62,17 +63,16 @@ model assets {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model budgets {
-  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id     String      @db.Uuid
-  category_id String?     @db.Uuid
-  amount      Decimal     @db.Decimal(18, 2)
-  period      String      @db.VarChar(20)
-  start_date  DateTime    @db.Timestamptz(6)
-  end_date    DateTime    @db.Timestamptz(6)
-  created_at  DateTime?   @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime?   @default(now()) @db.Timestamptz(6)
-  categories  categories? @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users       users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id           String              @db.Uuid
+  amount            Decimal             @db.Decimal(18, 2)
+  period            String              @db.VarChar(20)
+  start_date        DateTime            @db.Timestamptz(6)
+  end_date          DateTime            @db.Timestamptz(6)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  budget_categories budget_categories[]
+  users             users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id, start_date, end_date], map: "idx_budgets_user_date")
 }
@@ -85,7 +85,7 @@ model categories {
   deleted_at        DateTime?           @db.Timestamptz(6)
   created_at        DateTime?           @default(now()) @db.Timestamptz(6)
   updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
-  budgets           budgets[]
+  budget_categories budget_categories[]
   users             users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   fiat_transactions fiat_transactions[]
 
@@ -118,15 +118,19 @@ model fiat_transactions {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model goals {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id        String    @db.Uuid
-  name           String    @db.VarChar(255)
-  target_amount  Decimal   @db.Decimal(18, 2)
-  current_amount Decimal?  @default(0) @db.Decimal(18, 2)
-  deadline       DateTime? @db.Timestamptz(6)
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
-  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id             String    @db.Uuid
+  name                String    @db.VarChar(255)
+  target_amount       Decimal   @db.Decimal(18, 2)
+  current_amount      Decimal?  @default(0) @db.Decimal(18, 2)
+  deadline            DateTime? @db.Timestamptz(6)
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  asset_id            String?   @db.Uuid
+  target_asset_units  Decimal?  @db.Decimal(18, 8)
+  current_asset_units Decimal?  @default(0) @db.Decimal(18, 8)
+  assets              assets?   @relation(fields: [asset_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -176,6 +180,16 @@ model wallets {
   fiat_transactions_fiat_transactions_to_wallet_idTowallets fiat_transactions[] @relation("fiat_transactions_to_wallet_idTowallets")
   fiat_transactions_fiat_transactions_wallet_idTowallets    fiat_transactions[] @relation("fiat_transactions_wallet_idTowallets")
   users                                                     users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model budget_categories {
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  budget_id   String     @db.Uuid
+  category_id String     @db.Uuid
+  budgets     budgets    @relation(fields: [budget_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categories  categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([budget_id, category_id])
 }
 
 enum asset_tx_type {

@@ -260,7 +260,30 @@ CREATE INDEX idx_budgets_user_date ON budgets(user_id, start_date, end_date);
 
 
 
-npx prisma db pull
 
 
-npx prisma generate
+
+
+
+
+
+
+
+
+
+
+-- 1. Modifikasi tabel goals untuk mendukung tracking portofolio Aset
+ALTER TABLE goals
+ADD COLUMN asset_id UUID REFERENCES assets(id) ON DELETE CASCADE,
+ADD COLUMN target_asset_units DECIMAL(18, 8),
+ADD COLUMN current_asset_units DECIMAL(18, 8) DEFAULT 0;
+
+-- 2. Modifikasi tabel budgets untuk mendukung Multi-Kategori
+ALTER TABLE budgets DROP COLUMN category_id;
+
+CREATE TABLE budget_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    budget_id UUID NOT NULL REFERENCES budgets(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    UNIQUE(budget_id, category_id)
+);

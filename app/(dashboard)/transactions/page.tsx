@@ -15,7 +15,7 @@ export default async function TransactionsPage(props: {
   if (!session?.user?.id) redirect('/login');
 
   const searchParams = await props.searchParams;
-  const { type, categoryId, walletId, startDate, endDate } = searchParams;
+  const { type, categoryId, walletId, startDate, endDate, search, minAmount, maxAmount } = searchParams;
 
   // Fetch Wallets for the Add form & Filters
   const wallets = await prisma.wallets.findMany({
@@ -55,6 +55,18 @@ export default async function TransactionsPage(props: {
     if (endDate) {
       whereClause.transaction_date.lte = new Date(`${endDate}T23:59:59.999Z`);
     }
+  }
+
+  // Keyword search: match on description field (case-insensitive)
+  if (search && search.trim()) {
+    whereClause.description = { contains: search.trim(), mode: 'insensitive' };
+  }
+
+  // Amount range filter
+  if (minAmount || maxAmount) {
+    whereClause.amount = {};
+    if (minAmount) whereClause.amount.gte = parseFloat(minAmount);
+    if (maxAmount) whereClause.amount.lte = parseFloat(maxAmount);
   }
 
   // Fetch Transactions for List

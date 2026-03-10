@@ -88,7 +88,7 @@ export default function TransactionList({ transactions }: { transactions: any[] 
                 </p>
                 {tx.description && (
                   <p className="text-xs text-slate-400 mt-1 italic">
-                    "{tx.description}"
+                    &quot;{tx.description}&quot;
                   </p>
                 )}
               </div>

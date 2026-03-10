@@ -144,7 +144,7 @@ export default async function PortfolioAssetsPage() {
               </div>
 
               {/* Lower Section (Balances) */}
-              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100 dark:border-slate-700/50 h-full">
+              <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100 dark:border-slate-700/50">
                 {(() => {
                   const p = asset.user_portfolios?.[0];
                   const units = Number(p?.total_units || 0);
@@ -165,7 +165,7 @@ export default async function PortfolioAssetsPage() {
                            {formatRupiah(avgPrice)}
                         </span>
                       </div>
-                      <div className="pt-2 mt-auto border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-sm">
+                      <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700 flex justify-between items-center text-sm">
                         <span className="text-slate-500 dark:text-slate-400 font-semibold">Estimasi Nilai</span>
                         <span className="font-bold text-indigo-600 dark:text-indigo-400">
                            {formatRupiah(totalEst)}

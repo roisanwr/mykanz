@@ -21,7 +21,7 @@ type MenuItem = {
 }
 
 const MENU_ITEMS: MenuItem[] = [
-  { name: 'Ringkasan', path: '/', icon: LayoutDashboard },
+  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Dompet & Kas', path: '/wallets', icon: Wallet },
   { name: 'Transaksi', path: '/transactions', icon: ArrowRightLeft },
   { name: 'Kategori', path: '/categories', icon: Tags },

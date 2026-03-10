@@ -26,6 +26,18 @@ export default async function PortfolioTransactionsPage() {
     })
   ]);
 
+  const serializedTransactions = transactions.map(tx => ({
+    ...tx,
+    units: tx.units.toString(),
+    price_per_unit: tx.price_per_unit.toString(),
+    total_amount: tx.total_amount.toString(),
+    user_portfolios: tx.user_portfolios ? {
+      ...tx.user_portfolios,
+      total_units: tx.user_portfolios.total_units?.toString(),
+      average_buy_price: tx.user_portfolios.average_buy_price?.toString(),
+    } : null
+  }));
+
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
       
@@ -47,14 +59,14 @@ export default async function PortfolioTransactionsPage() {
         <AddInvestmentModal assets={assets} wallets={wallets} />
       </div>
 
-      {transactions.length > 0 && (
+      {serializedTransactions.length > 0 && (
          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-sm mt-6">
            <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Riwayat Transaksi</h2>
-           <InvestmentTransactionList transactions={transactions} />
+           <InvestmentTransactionList transactions={serializedTransactions} />
          </div>
       )}
 
-      {transactions.length === 0 && (
+      {serializedTransactions.length === 0 && (
          <InvestmentTransactionList transactions={[]} />
       )}
 

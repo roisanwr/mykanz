@@ -240,7 +240,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                         <div 
                           className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-40 opacity-100 mt-1' : 'max-h-0 opacity-0'}`}
                         >
-                           <div className="pl-10 pr-2 space-y-1 py-1">
+                           <div className="space-y-1 py-1">
                              {item.subItems.map(subItem => {
                                // Fix bug: only exactly match the path to avoid /portfolios/transactions highlighting /portfolios too.
                                const isSubActive = pathname === subItem.path
@@ -249,7 +249,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                                    key={subItem.path}
                                    href={subItem.path}
                                    onClick={() => setIsMobileMenuOpen(false)}
-                                   className={`block px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                                   className={`block px-3 pl-12 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                      isSubActive 
                                        ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' 
                                        : 'text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'

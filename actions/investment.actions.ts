@@ -23,8 +23,8 @@ export async function createInvestment(formData: FormData) {
     const saveToWallet = formData.get('save_to_wallet') === 'true';
     const walletId = formData.get('wallet_id') as string | null;
 
-    if (!type || !assetId || !unitsStr || !priceStr || !dateStr) {
-      return { error: 'Semua data wajib (Aset, Tipe, Unit, Harga, Tanggal) harus diisi!' };
+    if (!type || !assetId || !unitsStr || !dateStr) {
+      return { error: 'Data wajib (Aset, Tipe, Unit, Tanggal) harus diisi!' };
     }
 
     if (saveToWallet && !walletId) {
@@ -33,15 +33,15 @@ export async function createInvestment(formData: FormData) {
 
     // Replace dot with empty string for IDR formats
     const cleanUnits = unitsStr.replace(/\./g, '').replace(',', '.');
-    const cleanPrice = priceStr.replace(/\./g, '').replace(',', '.');
+    const cleanPrice = priceStr ? priceStr.replace(/\./g, '').replace(',', '.') : '0';
 
     const units = new Prisma.Decimal(cleanUnits);
     const price = new Prisma.Decimal(cleanPrice);
     const totalAmount = units.mul(price);
     const txDate = new Date(dateStr);
 
-    if (units.lte(0) || price.lte(0)) {
-      return { error: 'Unit dan Harga harus lebih dari 0!' };
+    if (units.lte(0) || price.lt(0)) {
+      return { error: 'Unit harus lebih dari 0 dan Harga tidak boleh negatif!' };
     }
 
     // 1. Get or Create User Portfolio

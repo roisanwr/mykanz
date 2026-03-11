@@ -252,7 +252,7 @@ export default function TransactionActivityChart({
       <div className="h-[280px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           {viewMode === 'wealth' ? (
-            <AreaChart data={chartData} margin={{ top: 5, right: 10, left: 15, bottom: 5 }}>
+            <AreaChart data={chartData as any[]} margin={{ top: 5, right: 10, left: 15, bottom: 5 }}>
               <defs>
                 <linearGradient id="gradKas" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={WEALTH_LINE_STYLES.kas.color} stopOpacity={0.15} />
@@ -272,7 +272,7 @@ export default function TransactionActivityChart({
               <Area type="monotone" dataKey="investasi" name={WEALTH_LINE_STYLES.investasi.label} stroke={WEALTH_LINE_STYLES.investasi.color} fill="url(#gradInvestasi)" strokeWidth={2.5} dot={false} activeDot={{ r: 5, stroke: 'white', strokeWidth: 2 }} />
             </AreaChart>
           ) : (
-            <LineChart data={chartData} margin={{ top: 5, right: 10, left: viewMode === 'amount' ? 15 : -20, bottom: 5 }}>
+            <LineChart data={chartData as any[]} margin={{ top: 5, right: 10, left: viewMode === 'amount' ? 15 : -20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" opacity={0.5} vertical={false} />
               <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={6} interval={tickInterval} />
               <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10 }} width={yAxisWidth} tickFormatter={yAxisFormatter} />

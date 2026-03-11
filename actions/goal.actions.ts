@@ -125,7 +125,7 @@ export async function addFundsToGoal(formData: FormData) {
        const catId = await getOrCreateCategory('Tabungan Impian', 'PENGELUARAN');
        await tx.fiat_transactions.create({
          data: {
-           user_id: session.user.id,
+           user_id: userId,
            wallet_id: walletId,
            category_id: catId,
            transaction_type: 'PENGELUARAN',

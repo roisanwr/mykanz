@@ -147,7 +147,7 @@ export default async function BudgetsPage() {
                        Kategori Diawasi: {budget.budget_categories.length}
                     </h3>
                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-1">
-                       {budget.budget_categories.map(c => c.categories?.name).join(', ')}
+                       {budget.budget_categories.map((c: any) => c.categories?.name).join(', ')}
                     </div>
                   </div>
                 </div>

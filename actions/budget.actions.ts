@@ -9,6 +9,8 @@ export async function createBudget(formData: FormData) {
   try {
     const session = await auth();
     if (!session?.user?.id) return { error: 'Harap login terlebih dahulu!' };
+    
+    const userId = session.user.id;
 
     const amountStr = formData.get('amount') as string;
     const period = formData.get('period') as string;
@@ -60,7 +62,7 @@ export async function createBudget(formData: FormData) {
     await prisma.$transaction(async (tx) => {
        const budget = await tx.budgets.create({
          data: {
-           user_id: session.user.id,
+           user_id: userId,
            amount,
            period,
            start_date: startDate,

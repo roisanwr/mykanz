@@ -1,14 +1,19 @@
 // components/TransactionList.tsx
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useFeedback } from '@/components/FeedbackProvider';
 import { deleteTransaction } from '@/actions/transaction.actions';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X } from 'lucide-react';
 
 export default function TransactionList({ transactions }: { transactions: any[] }) {
   const { showFeedback } = useFeedback();
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const handleDelete = async (id: string) => {
     setIsDeletingId(id);
@@ -19,6 +24,49 @@ export default function TransactionList({ transactions }: { transactions: any[] 
       showFeedback('Transaksi berhasil dihapus', 'delete');
     }
     setIsDeletingId(null);
+    setTransactionToDelete(null);
+  };
+
+  const renderModal = () => {
+    if (!mounted || !transactionToDelete) return null;
+
+    return createPortal(
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={() => setTransactionToDelete(null)} 
+      >
+        <div 
+          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()} 
+        >
+          <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-700 bg-red-50/50 dark:bg-red-500/10">
+            <h3 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+              <Trash2 className="w-5 h-5"/> Hapus Transaksi
+            </h3>
+            <button onClick={() => setTransactionToDelete(null)} className="text-slate-400 hover:text-red-500 bg-white/50 dark:bg-slate-800/50 hover:bg-red-100 dark:hover:bg-red-500/20 p-1.5 rounded-lg transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-6 space-y-4">
+            <p className="text-slate-600 dark:text-slate-300">
+              Apakah kamu yakin ingin menghapus transaksi ini? Aksi ini tidak dapat dibatalkan dan akan mempengaruhi saldo dompet terkait.
+            </p>
+            <div className="flex gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-2">
+              <button onClick={() => setTransactionToDelete(null)} className="flex-1 px-4 py-2.5 rounded-xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
+              <button 
+                onClick={() => handleDelete(transactionToDelete.id)} 
+                disabled={isDeletingId === transactionToDelete.id} 
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex justify-center items-center"
+              >
+                {isDeletingId === transactionToDelete.id ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : 'Ya, Hapus'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   const formatRupiah = (angka: number) => {
@@ -103,7 +151,7 @@ export default function TransactionList({ transactions }: { transactions: any[] 
 
               {/* Action Bullets - Only visible on hover/focus on desktop, but always visible on mobile */}
               <button 
-                onClick={() => handleDelete(tx.id)}
+                onClick={() => setTransactionToDelete(tx)}
                 disabled={isDeletingId === tx.id}
                 className="p-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50"
                 title="Hapus Transaksi"
@@ -115,6 +163,7 @@ export default function TransactionList({ transactions }: { transactions: any[] 
           </div>
         );
       })}
+      {renderModal()}
     </div>
   );
 }

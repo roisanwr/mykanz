@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mykanz-db:
+    image: postgres:15-alpine
+    container_name: mykanz_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: mykanz_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - mykanz_db_data:/var/lib/postgresql/data
+
+volumes:
+  mykanz_db_data:

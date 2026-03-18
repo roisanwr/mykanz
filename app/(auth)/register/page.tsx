@@ -1,7 +1,42 @@
 // app/(auth)/register/page.tsx
-import { registerUser } from '@/actions/auth.actions'
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function RegisterPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    const form = e.currentTarget
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value
+    const email = (form.elements.namedItem('email') as HTMLInputElement)?.value
+    const password = (form.elements.namedItem('password') as HTMLInputElement)?.value
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      })
+      const result = await res.json()
+      if (!res.ok || result?.error) {
+        setError(result.error || 'Gagal membuat akun.')
+      } else {
+        router.push('/login')
+      }
+    } catch {
+      setError('Gagal terhubung ke server.')
+    }
+    setIsLoading(false)
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
@@ -11,11 +46,13 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-gray-500">Langkah pertama menuju kebebasan finansial! 🚀</p>
         </div>
 
-        {/* Pesta "Aha!" Momen:
-          Lihat atribut action di bawah? Kita LANGSUNG memanggil fungsi registerUser 
-          dari server action tanpa perlu fetch(), axios, atau state yang ribet! React 19 itu ajaib!
-        */}
-        <form action={registerUser} className="space-y-5">
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Nama Panggilan</label>
             <input
@@ -52,9 +89,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-bold hover:bg-blue-700 focus:ring-4 focus:ring-blue-600/30 transition-all active:scale-[0.98]"
+            disabled={isLoading}
+            className="mt-6 w-full rounded-lg bg-blue-600 px-4 py-3 text-white font-bold hover:bg-blue-700 focus:ring-4 focus:ring-blue-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            Daftar Sekarang 🔥
+            {isLoading ? 'Mendaftarkan...' : 'Daftar Sekarang 🔥'}
           </button>
         </form>
 

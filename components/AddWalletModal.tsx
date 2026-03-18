@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom'; // JURUS SAKTI PORTAL!
 import { Plus, X, Wallet, Banknote, CreditCard, Smartphone } from 'lucide-react';
-import { createWallet } from '@/actions/wallet.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddWalletModal() {
@@ -24,19 +24,45 @@ export default function AddWalletModal() {
     setMounted(true);
   }, []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const router = useRouter(); // <--- Tambahkan ini buat refresh halaman nanti
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
     
-    const result = await createWallet(formData);
-    
-    if (result?.error) {
-      setErrorMsg(result.error);
-      showFeedback(result.error, 'error');
-      setIsLoading(false);
-    } else {
-      showFeedback('Dompet berhasil dibuat!', 'success');
-      setIsOpen(false);
+    // 1. Ambil data dari elemen form yang sedang disubmit
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get('name') as string;
+    const type = formData.get('type') as string;
+    const currency = formData.get('currency') as string;
+
+    try {
+      // 2. Momen Pembuktian: Nembak API baru kita! 🔫
+      const response = await fetch('/api/wallets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type, currency }), // Kirim sebagai JSON
+      });
+
+      // 3. Baca balasan dari Dapur (API)
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Kalau satpam (API) nolak, tampilkan errornya!
+        setErrorMsg(result.error || 'Ups! Gagal membuat dompet.');
+        showFeedback(result.error || 'Ups! Gagal membuat dompet.', 'error');
+      } else {
+        // WOOHOO! Berhasil! 🎉
+        showFeedback('Dompet berhasil dibuat lewat API!', 'success');
+        setIsOpen(false);
+        router.refresh(); // <--- Pengganti revalidatePath: Nyuruh halaman update data terbaru
+      }
+    } catch (error) {
+      console.error("Gagal memanggil API:", error);
+      setErrorMsg('Gagal terhubung ke server.');
+      showFeedback('Gagal terhubung ke server.', 'error');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -75,7 +101,7 @@ export default function AddWalletModal() {
         </div>
 
         {/* Form Konten */}
-        <form action={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
           
           {errorMsg && (
             <div className="p-3 bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 rounded-lg text-sm font-medium">

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, Edit2, Trash2, X, AlertTriangle, Save, ArrowUpRight, ArrowDownLeft, History, Search, Calendar } from 'lucide-react';
-import { updateCategory, deleteCategory, getCategoryHistory } from '@/actions/category.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function CategoryCardActions({ category }: { category: any }) {
@@ -23,51 +23,52 @@ export default function CategoryCardActions({ category }: { category: any }) {
   const [totalFilteredAmount, setTotalFilteredAmount] = useState(0);
 
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    const formData = new FormData();
-    formData.append('id', category.id);
-    formData.append('name', editName);
-    formData.append('type', editType);
-    
-    const result = await updateCategory(formData);
-    
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Kategori berhasil diubah!', 'success');
-      setActiveModal(null);
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: category.id, name: editName, type: editType }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal mengubah kategori.', 'error');
+      } else {
+        showFeedback('Kategori berhasil diubah!', 'success');
+        setActiveModal(null);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
 
   const handleDelete = async () => {
     setIsLoading(true);
-    const result = await deleteCategory(category.id);
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Kategori berhasil dihapus!', 'delete', 'Terhapus');
-      setActiveModal(null);
+    try {
+      const res = await fetch(`/api/categories?id=${category.id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menghapus kategori.', 'error');
+      } else {
+        showFeedback('Kategori berhasil dihapus!', 'delete', 'Terhapus');
+        setActiveModal(null);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
 
   const fetchHistory = async () => {
     setIsLoading(true);
-    const result = await getCategoryHistory(category.id, startDate, endDate);
-    if (result.success && result.data) {
-      setHistoryData(result.data);
-      
-      // Calculate total
-      const total = result.data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-      setTotalFilteredAmount(total);
-    } else {
-      showFeedback(result.error || 'Gagal memuat riwayat.', 'error');
-    }
+    await fetchHistoryWrapper(startDate, endDate);
     setIsLoading(false);
   };
 
@@ -83,18 +84,24 @@ export default function CategoryCardActions({ category }: { category: any }) {
   // Custom fetch function to handle initial load where state might not be set yet
   const fetchHistoryWrapper = async (start: string, end: string) => {
     setIsLoading(true);
-    const result = await getCategoryHistory(category.id, start, end);
-    if (result.success && result.data) {
-      setHistoryData(result.data);
-      const total = result.data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
-      setTotalFilteredAmount(total);
-    }
+    try {
+      const params = new URLSearchParams({ categoryId: category.id });
+      if (start) params.append('startDate', start);
+      if (end) params.append('endDate', end);
+      const res = await fetch(`/api/categories/history?${params.toString()}`);
+      const result = await res.json();
+      if (result.success && result.data) {
+        setHistoryData(result.data);
+        const total = result.data.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+        setTotalFilteredAmount(total);
+      }
+    } catch { /* silently fail */ }
     setIsLoading(false);
   }
 
   // Called when user clicks "Cari" button inside history modal
-  const handleFilterSearch = () => {
-    fetchHistory();
+  const handleFilterSearch = async () => {
+    await fetchHistoryWrapper(startDate, endDate);
   };
 
   const closeModal = () => {

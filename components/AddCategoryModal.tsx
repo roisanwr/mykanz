@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { createCategory } from '@/actions/category.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddCategoryModal() {
@@ -12,19 +12,32 @@ export default function AddCategoryModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [txType, setTxType] = useState<'PEMASUKAN' | 'PENGELUARAN'>('PENGELUARAN');
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    const result = await createCategory(formData);
-    
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Kategori berhasil dibuat!', 'success');
-      setIsOpen(false);
+    const form = e.currentTarget;
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value;
+    try {
+      const res = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, type: txType }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal membuat kategori.', 'error');
+      } else {
+        showFeedback('Kategori berhasil dibuat!', 'success');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -54,7 +67,7 @@ export default function AddCategoryModal() {
         </div>
 
         <div className="p-5">
-          <form action={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             
             {/* TIPE TRANSAKSI (TABS) */}
             <div>

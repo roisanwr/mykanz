@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, X } from 'lucide-react';
-import { deleteBudget } from '@/actions/budget.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function BudgetCardActions({ budgetId }: { budgetId: string }) {
@@ -11,18 +11,26 @@ export default function BudgetCardActions({ budgetId }: { budgetId: string }) {
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
   const handleDelete = async () => {
     setIsLoading(true);
-    const result = await deleteBudget(budgetId);
-    if (result?.error) {
-      showFeedback(result.error, 'error');
+    try {
+      const res = await fetch(`/api/budgets?id=${budgetId}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menghapus anggaran.', 'error');
+        setIsLoading(false);
+      } else {
+        showFeedback('Anggaran berhasil dihapus.', 'delete');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
       setIsLoading(false);
-    } else {
-      showFeedback(`Anggaran berhasil dihapus.`, 'delete');
-      setIsOpen(false);
     }
   };
 

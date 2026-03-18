@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Calendar } from 'lucide-react';
-import { createTransaction } from '@/actions/transaction.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddTransactionModal({ wallets, categories }: { wallets: any[], categories: any[] }) {
@@ -28,6 +28,7 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
   });
   
   const { showFeedback } = useFeedback();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -42,30 +43,61 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
     setter(formatted);
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
     
-    // Validasi Transfer Otomatis di Client sebelum ke Server
+    // Client-side validation for transfer
     if (txType === 'TRANSFER' && sourceWalletId === destWalletId) {
       showFeedback('Dompet asal dan tujuan tidak boleh sama!', 'warning', 'Invalid');
       setIsLoading(false);
       return;
     }
 
-    const result = await createTransaction(formData);
-    
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-      setIsLoading(false);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    // Parse amounts (strip formatting)
+    const rawAmount = (formData.get('amount') as string || '').replace(/\D/g, '');
+    const rawAdminFee = (formData.get('admin_fee') as string || '').replace(/\D/g, '');
+
+    const payload: any = {
+      transaction_type: txType,
+      wallet_id: sourceWalletId,
+      amount: parseFloat(rawAmount) || 0,
+      description: formData.get('description') as string || null,
+      transaction_date: formData.get('transaction_date') as string,
+    };
+
+    if (txType === 'TRANSFER') {
+      payload.to_wallet_id = destWalletId;
+      payload.admin_fee = parseFloat(rawAdminFee) || 0;
     } else {
-      showFeedback('Transaksi berhasil dicatat!', 'success');
-      setIsOpen(false);
+      payload.category_id = formData.get('category_id') as string || null;
+    }
+
+    try {
+      const res = await fetch('/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal mencatat transaksi.', 'error');
+      } else {
+        showFeedback('Transaksi berhasil dicatat!', 'success');
+        setIsOpen(false);
+        setTxType('PENGELUARAN');
+        setAmountInput('');
+        setAdminFeeInput('');
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
+    } finally {
       setIsLoading(false);
-      
-      // Reset form on success
-      setTxType('PENGELUARAN');
-      setAmountInput('');
-      setAdminFeeInput('');
     }
   };
 
@@ -94,7 +126,7 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
         </div>
 
         <div className="overflow-y-auto p-5">
-          <form action={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             
             {/* TIPE TRANSAKSI (TABS) */}
             <div>

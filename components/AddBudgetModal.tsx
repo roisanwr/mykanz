@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, PieChart, Check } from 'lucide-react';
-import { createBudget } from '@/actions/budget.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddBudgetModal({ categories }: { categories: any[] }) {
@@ -18,6 +18,7 @@ export default function AddBudgetModal({ categories }: { categories: any[] }) {
   const expenseCategories = categories.filter(c => c.type === 'PENGELUARAN');
 
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
@@ -27,20 +28,36 @@ export default function AddBudgetModal({ categories }: { categories: any[] }) {
     );
   };
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    
-    // Pass selected categories as JSON string to form
-    formData.append('category_ids', JSON.stringify(selectedCategories));
-    
-    const result = await createBudget(formData);
-    
-    if (result?.error) {
-       showFeedback(result.error, 'error');
-    } else {
-       showFeedback('Berhasil membuat Anggaran baru! 📊', 'success');
-       setIsOpen(false);
-       setSelectedCategories([]);
+    const form = e.currentTarget;
+    const rawAmount = ((form.elements.namedItem('amount') as HTMLInputElement)?.value || '').replace(/\./g, '');
+    const period = (form.elements.namedItem('period') as HTMLSelectElement)?.value;
+    const date = (form.elements.namedItem('date') as HTMLInputElement)?.value;
+
+    try {
+      const res = await fetch('/api/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(rawAmount) || 0,
+          period,
+          date,
+          category_ids: selectedCategories,
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal membuat anggaran.', 'error');
+      } else {
+        showFeedback('Berhasil membuat Anggaran baru! 📊', 'success');
+        setIsOpen(false);
+        setSelectedCategories([]);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -81,7 +98,7 @@ export default function AddBudgetModal({ categories }: { categories: any[] }) {
         </div>
 
         <div className="p-5 overflow-y-auto">
-          <form action={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
             
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex justify-between">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, Rocket, ArrowRightLeft, Percent, Wallet as WalletIcon } from 'lucide-react';
-import { createInvestment } from '@/actions/investment.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddInvestmentModal({ assets, wallets }: { assets: any[], wallets: any[] }) {
@@ -13,23 +13,48 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
   const [saveToWallet, setSaveToWallet] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    formData.append('transaction_type', activeTab);
-    if (saveToWallet) {
-      formData.append('save_to_wallet', 'true');
-    }
+    const form = e.currentTarget;
+    const asset_id = (form.elements.namedItem('asset_id') as HTMLSelectElement)?.value;
+    const rawUnits = ((form.elements.namedItem('units') as HTMLInputElement)?.value || '').replace(/\./g, '');
+    const rawPrice = ((form.elements.namedItem('price_per_unit') as HTMLInputElement)?.value || '').replace(/\./g, '');
+    const transaction_date = (form.elements.namedItem('transaction_date') as HTMLInputElement)?.value;
+    const notes = (form.elements.namedItem('notes') as HTMLInputElement)?.value || null;
+    const wallet_id = saveToWallet ? (form.elements.namedItem('wallet_id') as HTMLSelectElement)?.value : null;
 
-    const result = await createInvestment(formData);
-    
-    if (result?.error) {
-       showFeedback(result.error, 'error');
-    } else {
-       showFeedback(`Berhasil mencatat transaksi ${activeTab === 'BELI' ? 'Pembelian' : 'Penjualan'} Aset!`, 'success');
-       setIsOpen(false);
+    const payload: any = {
+      transaction_type: activeTab,
+      asset_id,
+      units: parseFloat(rawUnits) || 0,
+      price_per_unit: parseFloat(rawPrice) || null,
+      transaction_date,
+      notes,
+      save_to_wallet: saveToWallet,
+      wallet_id,
+    };
+
+    try {
+      const res = await fetch('/api/investments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal mencatat investasi.', 'error');
+      } else {
+        showFeedback(`Berhasil mencatat transaksi ${activeTab === 'BELI' ? 'Pembelian' : 'Penjualan'} Aset!`, 'success');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -95,7 +120,7 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
              </button>
            </div>
 
-          <form action={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex justify-between">

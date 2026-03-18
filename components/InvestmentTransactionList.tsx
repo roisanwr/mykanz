@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDownRight, ArrowUpRight, Trash2, X } from 'lucide-react';
-import { deleteInvestment } from '@/actions/investment.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function InvestmentTransactionList({ transactions }: { transactions: any[] }) {
   const { showFeedback } = useFeedback();
+  const router = useRouter();
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -16,12 +17,17 @@ export default function InvestmentTransactionList({ transactions }: { transactio
 
   const handleDelete = async (id: string) => {
     setIsDeletingId(id);
-    
-    const result = await deleteInvestment(id);
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Transaksi investasi dihapus.', 'delete');
+    try {
+      const res = await fetch(`/api/investments?id=${id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menghapus investasi.', 'error');
+      } else {
+        showFeedback('Transaksi investasi dihapus.', 'delete');
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsDeletingId(null);
     setTransactionToDelete(null);

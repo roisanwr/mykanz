@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Trash2, X } from 'lucide-react';
-import { deleteGoal } from '@/actions/goal.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function GoalCardActions({ goalId, name }: { goalId: string, name: string }) {
@@ -11,18 +11,26 @@ export default function GoalCardActions({ goalId, name }: { goalId: string, name
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
   const handleDelete = async () => {
     setIsLoading(true);
-    const result = await deleteGoal(goalId);
-    if (result?.error) {
-      showFeedback(result.error, 'error');
+    try {
+      const res = await fetch(`/api/goals?id=${goalId}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menghapus target.', 'error');
+        setIsLoading(false);
+      } else {
+        showFeedback(`Target "${name}" berhasil dihapus.`, 'delete');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
       setIsLoading(false);
-    } else {
-      showFeedback(`Target "${name}" berhasil dihapus.`, 'delete');
-      setIsOpen(false);
     }
   };
 

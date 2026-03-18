@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, Rocket, Boxes } from 'lucide-react';
-import { createAsset } from '@/actions/asset.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 const ASSET_TYPES = [
@@ -20,31 +20,39 @@ export default function AddAssetModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { showFeedback } = useFeedback();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    
-    // Automatically map UI "REKSADANA" to backend "SAHAM" for simplicity in Prisma enums 
-    // Wait, let's just use exact Prisma enums. 
-    // Actually Prisma enum asset_type is: KRIPTO, SAHAM, LOGAM_MULIA, PROPERTI, BISNIS, LAINNYA.
-    // If user picks Reksadana, let's map it to SAHAM or LAINNYA under the hood, or we could just use LAINNYA.
-    // Let's rely on the form data.
-    let type = formData.get('asset_type') as string;
-    if (type === 'REKSADANA') formData.set('asset_type', 'LAINNYA'); // Fallback map
+    const form = e.currentTarget;
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value;
+    const ticker_symbol = (form.elements.namedItem('ticker_symbol') as HTMLInputElement)?.value;
+    const unit_name = (form.elements.namedItem('unit_name') as HTMLInputElement)?.value;
+    let asset_type = (form.elements.namedItem('asset_type') as HTMLSelectElement)?.value;
+    if (asset_type === 'REKSADANA') asset_type = 'LAINNYA';
 
-    const result = await createAsset(formData);
-    
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-      setIsLoading(false);
-    } else {
-      showFeedback('Aset baru berhasil ditambahkan!', 'success');
-      setIsOpen(false);
-      setIsLoading(false);
+    try {
+      const res = await fetch('/api/assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, asset_type, ticker_symbol, unit_name }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menambahkan aset.', 'error');
+      } else {
+        showFeedback('Aset baru berhasil ditambahkan!', 'success');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
+    setIsLoading(false);
   };
 
   const modalContent = (isOpen && mounted) ? createPortal(
@@ -72,7 +80,7 @@ export default function AddAssetModal() {
         </div>
 
         <div className="p-5">
-          <form action={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, PiggyBank, Wallet as WalletIcon } from 'lucide-react';
-import { addFundsToGoal } from '@/actions/goal.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddFundsModal({ goal, wallets }: { goal: any, wallets: any[] }) {
@@ -12,20 +12,34 @@ export default function AddFundsModal({ goal, wallets }: { goal: any, wallets: a
   const [mounted, setMounted] = useState(false);
   
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    formData.append('goal_id', goal.id);
-    
-    const result = await addFundsToGoal(formData);
-    
-    if (result?.error) {
-       showFeedback(result.error, 'error');
-    } else {
-       showFeedback(`Berhasil menambahkan tabungan ke ${goal.name}! 🐷`, 'success');
-       setIsOpen(false);
+    const form = e.currentTarget;
+    const wallet_id = (form.elements.namedItem('wallet_id') as HTMLSelectElement)?.value;
+    const rawAmount = (form.elements.namedItem('amount') as HTMLInputElement)?.value.replace(/\./g, '') || '0';
+    const amount = parseFloat(rawAmount);
+
+    try {
+      const res = await fetch('/api/goals/funds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal_id: goal.id, amount, wallet_id }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menabung.', 'error');
+      } else {
+        showFeedback(`Berhasil menambahkan tabungan ke ${goal.name}! 🐷`, 'success');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -74,7 +88,7 @@ export default function AddFundsModal({ goal, wallets }: { goal: any, wallets: a
             <p className="text-xl font-extrabold text-slate-800 dark:text-slate-100">{goal.name}</p>
           </div>
 
-          <form action={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex justify-between">

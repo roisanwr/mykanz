@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreVertical, Edit2, Trash2, X } from 'lucide-react';
-import { deleteAsset, updateAsset } from '@/actions/asset.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AssetCardActions({ asset }: { asset: any }) {
@@ -13,31 +13,52 @@ export default function AssetCardActions({ asset }: { asset: any }) {
   const [isLoading, setIsLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
-  const handleEdit = async (formData: FormData) => {
+  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    const result = await updateAsset(asset.id, formData);
-    
-    if (result?.error) {
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Aset berhasil diperbarui', 'success');
-      setIsEditModalOpen(false);
-      setIsOpen(false);
+    const form = e.currentTarget;
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value;
+    const ticker_symbol = (form.elements.namedItem('ticker_symbol') as HTMLInputElement)?.value;
+    const unit_name = (form.elements.namedItem('unit_name') as HTMLInputElement)?.value;
+    try {
+      const res = await fetch('/api/assets', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: asset.id, name, ticker_symbol, unit_name }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal memperbarui aset.', 'error');
+      } else {
+        showFeedback('Aset berhasil diperbarui', 'success');
+        setIsEditModalOpen(false);
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
 
   const handleDelete = async () => {
     setIsLoading(true);
-    const result = await deleteAsset(asset.id);
-    if (result?.error) {
-       showFeedback(result.error, 'error');
-    } else {
-       showFeedback('Aset berhasil dihapus', 'delete');
-       setIsDeleteModalOpen(false);
+    try {
+      const res = await fetch(`/api/assets?id=${asset.id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal menghapus aset.', 'error');
+      } else {
+        showFeedback('Aset berhasil dihapus', 'delete');
+        setIsDeleteModalOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -125,7 +146,7 @@ export default function AssetCardActions({ asset }: { asset: any }) {
               </h3>
             </div>
             <div className="p-5">
-              <form action={handleEdit} className="space-y-4">
+              <form onSubmit={handleEdit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Nama Aset</label>
                   <input type="text" name="name" defaultValue={asset.name} required className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-indigo-500/50" />

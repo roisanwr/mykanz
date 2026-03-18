@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { logOut } from '@/actions/auth.actions'
+import { usePathname, useRouter } from 'next/navigation'
 import { 
   Menu, Bitcoin, Moon, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
@@ -41,7 +40,7 @@ const MENU_ITEMS: MenuItem[] = [
 
 export default function DashboardLayout({ children, user }: { children: React.ReactNode, user: any }) {
   const pathname = usePathname()
-  
+  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false) 
   const [isProfileOpen, setIsProfileOpen] = useState(false) 
@@ -83,6 +82,15 @@ export default function DashboardLayout({ children, user }: { children: React.Re
       setIsDarkMode(true)
     }
   }
+
+  const handleLogout = async () => {
+    try {
+      // Use NextAuth's built-in signout GET endpoint which handles session teardown + redirect
+      await fetch('/api/auth/signout', { method: 'POST' });
+    } catch { /* ignore */ } finally {
+      router.push('/login');
+    }
+  };
 
   const toggleMenu = (name: string) => {
     setOpenMenus(prev => ({
@@ -160,11 +168,13 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                       <UserIcon className="w-4 h-4 mr-3" /> Profil Saya
                     </Link>
                     
-                    <form action={logOut}>
-                      <button type="submit" className="w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1">
-                        <LogOut className="w-4 h-4 mr-3" /> Keluar
-                      </button>
-                    </form>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors mt-1"
+                    >
+                      <LogOut className="w-4 h-4 mr-3" /> Keluar
+                    </button>
                   </div>
                 </div>
               )}

@@ -4,7 +4,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { History, Pencil, Trash2, X, ArrowDownLeft, ArrowUpRight, ArrowRightLeft } from 'lucide-react';
-import { updateWallet, deleteWallet, getWalletHistory } from '@/actions/wallet.actions';
+
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function WalletCardActions({ wallet }: { wallet: any }) {
@@ -13,6 +14,7 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
+  const router = useRouter();
   const { showFeedback } = useFeedback();
 
   // History state
@@ -29,14 +31,28 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
   const handleEdit = async (formData: FormData) => {
     setIsLoading(true);
     setErrorMsg('');
-    formData.append('id', wallet.id);
-    const result = await updateWallet(formData);
-    if (result?.error) {
-      setErrorMsg(result.error);
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Dompet berhasil diperbarui!', 'success');
-      closeModal();
+    try {
+      const res = await fetch('/api/wallets', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: wallet.id,
+          name: formData.get('name'),
+          type: formData.get('type'),
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        setErrorMsg(result.error || 'Gagal memperbarui dompet.');
+        showFeedback(result.error || 'Gagal memperbarui dompet.', 'error');
+      } else {
+        showFeedback('Dompet berhasil diperbarui!', 'success');
+        closeModal();
+        router.refresh();
+      }
+    } catch {
+      setErrorMsg('Terjadi kesalahan jaringan.');
+      showFeedback('Terjadi kesalahan jaringan.', 'error');
     }
     setIsLoading(false);
   };
@@ -44,13 +60,20 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
   const handleDelete = async () => {
     setIsLoading(true);
     setErrorMsg('');
-    const result = await deleteWallet(wallet.id);
-    if (result?.error) {
-      setErrorMsg(result.error);
-      showFeedback(result.error, 'error');
-    } else {
-      showFeedback('Dompet berhasil dihapus!', 'delete', 'Terhapus');
-      closeModal();
+    try {
+      const res = await fetch(`/api/wallets?id=${wallet.id}`, { method: 'DELETE' });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        setErrorMsg(result.error || 'Gagal menghapus dompet.');
+        showFeedback(result.error || 'Gagal menghapus dompet.', 'error');
+      } else {
+        showFeedback('Dompet berhasil dihapus!', 'delete', 'Terhapus');
+        closeModal();
+        router.refresh();
+      }
+    } catch {
+      setErrorMsg('Terjadi kesalahan jaringan.');
+      showFeedback('Terjadi kesalahan jaringan.', 'error');
     }
     setIsLoading(false);
   };
@@ -59,9 +82,14 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
     if (activeModal === 'history') {
       const fetchHistory = async () => {
         setIsLoadingHistory(true);
-        const result = await getWalletHistory(wallet.id);
-        if (result?.success) {
-          setHistoryData(result.data);
+        try {
+          const res = await fetch(`/api/wallets/history?walletId=${wallet.id}`);
+          const result = await res.json();
+          if (result?.success) {
+            setHistoryData(result.data);
+          }
+        } catch {
+          // silently fail, empty list will be shown
         }
         setIsLoadingHistory(false);
       };

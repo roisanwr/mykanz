@@ -62,3 +62,67 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+
+// 🚀 PUT: Untuk Mengupdate Dompet (Pengganti updateWallet)
+export async function PUT(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Kamu harus login dulu ya!' }, { status: 401 });
+    }
+
+    // Ambil data dari Body JSON
+    const body = await req.json();
+    const { id, name, type } = body;
+
+    if (!id || !name || !type) {
+      return NextResponse.json({ error: 'Semua field wajib diisi!' }, { status: 400 });
+    }
+
+    // Update ke Database
+    const updatedWallet = await prisma.wallets.update({
+      where: { id: id, user_id: session.user.id }, // Pastikan cuma dompet miliknya sendiri yang bisa diedit
+      data: { name, type, updated_at: new Date() },
+    });
+
+    return NextResponse.json(
+      { success: true, message: 'Dompet berhasil diupdate!', data: updatedWallet },
+      { status: 200 } // Status 200 berarti "OK"
+    );
+  } catch (error) {
+    console.error("Gagal update dompet via API:", error);
+    return NextResponse.json({ error: 'Ups! Terjadi kesalahan pada server.' }, { status: 500 });
+  }
+}
+
+// 🚀 DELETE: Untuk Menghapus Dompet (Pengganti deleteWallet)
+export async function DELETE(req: Request) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Kamu harus login dulu ya!' }, { status: 401 });
+    }
+
+    // Trik API: Ambil ID dari URL pencarian (contoh: /api/wallets?id=abc-123)
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID Dompet wajib dikirim!' }, { status: 400 });
+    }
+
+    // Soft Delete (hanya update deleted_at, sesuai logikamu sebelumnya)
+    await prisma.wallets.update({
+      where: { id: id, user_id: session.user.id },
+      data: { deleted_at: new Date(), updated_at: new Date() },
+    });
+
+    return NextResponse.json(
+      { success: true, message: 'Dompet berhasil dihapus!' },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Gagal hapus dompet via API:", error);
+    return NextResponse.json({ error: 'Ups! Gagal menghapus dompet.' }, { status: 500 });
+  }
+}

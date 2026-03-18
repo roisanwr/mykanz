@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, X, Target, Bitcoin } from 'lucide-react';
-import { createGoal } from '@/actions/goal.actions';
+import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
 export default function AddGoalModal({ assets }: { assets: any[] }) {
@@ -15,20 +15,44 @@ export default function AddGoalModal({ assets }: { assets: any[] }) {
   const [isAssetTarget, setIsAssetTarget] = useState(false);
 
   const { showFeedback } = useFeedback();
+  const router = useRouter();
 
   useEffect(() => setMounted(true), []);
 
-  const handleSubmit = async (formData: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setIsLoading(true);
-    formData.append('is_asset_target', isAssetTarget.toString());
-    
-    const result = await createGoal(formData);
-    
-    if (result?.error) {
-       showFeedback(result.error, 'error');
+    const form = e.currentTarget;
+    const name = (form.elements.namedItem('name') as HTMLInputElement)?.value;
+    const deadline = (form.elements.namedItem('deadline') as HTMLInputElement)?.value || null;
+
+    let payload: any = { name, is_asset_target: isAssetTarget, deadline };
+
+    if (isAssetTarget) {
+      const asset_id = (form.elements.namedItem('asset_id') as HTMLSelectElement)?.value;
+      const rawUnits = ((form.elements.namedItem('target_asset_units') as HTMLInputElement)?.value || '').replace(/\./g, '');
+      payload = { ...payload, asset_id, target_asset_units: parseFloat(rawUnits) || 0 };
     } else {
-       showFeedback('Berhasil membuat Target Impian baru! 🎯', 'success');
-       setIsOpen(false);
+      const rawAmount = ((form.elements.namedItem('target_amount') as HTMLInputElement)?.value || '').replace(/\./g, '');
+      payload = { ...payload, target_amount: parseFloat(rawAmount) || 0 };
+    }
+
+    try {
+      const res = await fetch('/api/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json();
+      if (!res.ok || result?.error) {
+        showFeedback(result.error || 'Gagal membuat target.', 'error');
+      } else {
+        showFeedback('Berhasil membuat Target Impian baru! 🎯', 'success');
+        setIsOpen(false);
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsLoading(false);
   };
@@ -69,7 +93,7 @@ export default function AddGoalModal({ assets }: { assets: any[] }) {
         </div>
 
         <div className="p-5">
-          <form action={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             
             <div>
               <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">

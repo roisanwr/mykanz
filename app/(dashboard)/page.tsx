@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Prisma } from '@prisma/client';
 import DashboardCharts from '@/components/DashboardCharts';
+import LiveNetWorth from '@/components/LiveNetWorth';
 
 const formatRupiah = (angka: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -82,15 +83,12 @@ export default async function DashboardPage() {
         <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div>
-            <p className="text-indigo-200 dark:text-slate-400 font-medium mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Total Kekayaan Bersih
-            </p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-lg">
-              {formatRupiah(netWorth)}
-            </h1>
-          </div>
+          <LiveNetWorth
+            initialCash={totalCash}
+            initialInvestment={totalInvestment}
+            variant="hero"
+            show="total"
+          />
           
           <div className="flex gap-3">
             <Link href="/transactions" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 border border-white/10 shadow-lg shadow-black/20">
@@ -114,9 +112,7 @@ export default async function DashboardPage() {
             </div>
             <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Tunai & Bank</h3>
           </div>
-          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {formatRupiah(totalCash)}
-          </p>
+          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="cash" />
         </div>
 
         {/* Investasi Card */}
@@ -127,9 +123,7 @@ export default async function DashboardPage() {
             </div>
             <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Nilai Portofolio</h3>
           </div>
-          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {formatRupiah(totalInvestment)}
-          </p>
+          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
         </div>
 
         {/* Pemasukan Card */}

@@ -8,6 +8,8 @@ import {
   Calendar, FileText, Plus
 } from 'lucide-react';
 import PortfolioCharts from '@/components/PortfolioCharts';
+import LiveNetWorth from '@/components/LiveNetWorth';
+import LivePortfolioTable from '@/components/LivePortfolioTable';
 
 // ── Asset Type Meta ──────────────────────────────────────
 const ASSET_TYPE_META: Record<string, { label: string; color: string }> = {
@@ -124,13 +126,13 @@ export default async function PortfolioDashboardPage() {
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <p className="text-indigo-300 font-semibold mb-2 flex items-center gap-2 text-sm">
-              <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
-              Total Nilai Portofolio
-            </p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight mb-4">
-              {formatRupiah(totalPortfolioValue)}
-            </h1>
+            <LiveNetWorth
+              initialCash={0}
+              initialInvestment={totalPortfolioValue}
+              variant="hero"
+              show="investment"
+              label="Total Nilai Portofolio"
+            />
             <div className="flex flex-wrap gap-3">
               <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2">
                 <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Aset Aktif</p>
@@ -161,111 +163,20 @@ export default async function PortfolioDashboardPage() {
       {/* ── CHARTS ───────────────────────────────────────── */}
       <PortfolioCharts allocationData={allocationData} assetBarData={assetBarData} />
 
-      {/* ── ASSET TABLE ──────────────────────────────────── */}
-      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Kepemilikan Aset</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Diurutkan berdasarkan nilai estimasi tertinggi</p>
-          </div>
-          <Link href="/portfolios/assets" className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
-            Kelola Aset <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        {assetValues.length === 0 ? (
-          <div className="p-12 text-center">
-            <Rocket className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">Belum ada posisi aset.</p>
-            <Link href="/portfolios/assets" className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
-              <Plus className="w-4 h-4" /> Tambah Aset Pertama
-            </Link>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-slate-700/30">
-                  <th className="text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider px-5 py-3">Aset</th>
-                  <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">Unit</th>
-                  <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">Harga Rata-rata</th>
-                  <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 py-3">Estimasi Nilai</th>
-                  <th className="text-right text-[10px] font-bold text-slate-400 uppercase tracking-wider px-5 py-3">% Portfolio</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                {assetValues.map((a, i) => {
-                  const pct = totalPortfolioValue > 0 ? (a.value / totalPortfolioValue) * 100 : 0;
-                  const meta = ASSET_TYPE_META[a.type];
-                  const color = ASSET_COLORS[i % ASSET_COLORS.length];
-                  return (
-                    <tr key={a.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors group">
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-2 h-8 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                          <div>
-                            <p className="font-bold text-slate-900 dark:text-white text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                              {a.name}
-                            </p>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              {a.ticker && (
-                                <span className="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
-                                  {a.ticker}
-                                </span>
-                              )}
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ backgroundColor: `${color}20`, color: color }}>
-                                {meta?.label ?? a.type}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {formatUnit(a.units, a.unitName)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                          {a.avgPrice > 0 ? formatRupiah(a.avgPrice) : <span className="text-slate-400">—</span>}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <span className="text-sm font-black" style={{ color: a.value > 0 ? color : '#94a3b8' }}>
-                          {a.value > 0 ? formatRupiah(a.value) : <span className="text-slate-400 font-normal">—</span>}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex flex-col items-end gap-1">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            {pct.toFixed(1)}%
-                          </span>
-                          <div className="w-20 h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: color }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              {/* FOOTER: total */}
-              <tfoot>
-                <tr className="bg-slate-50 dark:bg-slate-700/30 border-t-2 border-slate-200 dark:border-slate-600">
-                  <td className="px-5 py-3 text-sm font-black text-slate-900 dark:text-white" colSpan={3}>Total Portofolio</td>
-                  <td className="px-4 py-3 text-right text-sm font-black text-indigo-600 dark:text-indigo-400">
-                    {formatRupiah(totalPortfolioValue)}
-                  </td>
-                  <td className="px-5 py-3 text-right text-sm font-black text-slate-900 dark:text-white">100%</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* ── LIVE ASSET TABLE ─────────────────────────────── */}
+      <LivePortfolioTable
+        assets={assetValues.map(a => ({
+          id: a.id,
+          name: a.name,
+          ticker: a.ticker,
+          type: a.type,
+          units: a.units,
+          avgPrice: a.avgPrice,
+          unitName: a.unitName,
+        }))}
+        assetTypeMeta={ASSET_TYPE_META}
+        assetColors={ASSET_COLORS}
+      />
 
       {/* ── RECENT ACTIVITY ──────────────────────────────── */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-sm overflow-hidden">

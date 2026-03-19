@@ -42,7 +42,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
         
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-extrabold text-gray-900">Buat Akun Kanz</h1>
+          <h1 className="text-3xl font-extrabold text-gray-900">Buat Akun MyKanz</h1>
           <p className="mt-2 text-sm text-gray-500">Langkah pertama menuju kebebasan finansial! 🚀</p>
         </div>
 

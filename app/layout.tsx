@@ -9,7 +9,7 @@ import { FeedbackProvider } from '@/components/FeedbackProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Kanz - Wealth Management Dashboard',
+  title: 'MyKanz - Wealth Management Dashboard',
   description: 'Pantau pergerakan aset dan target keuanganmu hari ini.',
 }
 

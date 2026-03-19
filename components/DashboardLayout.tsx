@@ -125,7 +125,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
               </div>
               <div className="flex flex-col">
                 <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none group-hover:text-orange-600 transition-colors">
-                  Kanz.
+                  MyKanz.
                 </h1>
                 <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mt-1">
                   Wealth

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, Mail, AlertCircle, X, Trash2 } from 'lucide-react';
+import { Check, Mail, CircleAlert, X, Trash2 } from 'lucide-react';
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info' | 'delete';
 
@@ -48,7 +48,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     },
     warning: {
       bg: 'bg-[#F2CD49]',
-      icon: <AlertCircle className="w-10 h-10 text-white fill-white stroke-[#F2CD49]" strokeWidth={2} />
+      icon: <CircleAlert className="w-10 h-10 text-white fill-white stroke-[#F2CD49]" strokeWidth={2} />
     },
     info: {
       bg: 'bg-[#6CA5E0]',

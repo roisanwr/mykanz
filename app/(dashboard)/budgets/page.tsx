@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
-import { PieChart, ShieldAlert, CheckCircle2, TrendingDown } from 'lucide-react';
+import { PieChart, ShieldAlert, TrendingDown } from 'lucide-react';
 import AddBudgetModal from '@/components/AddBudgetModal';
 import BudgetCardActions from '@/components/BudgetCardActions';
 

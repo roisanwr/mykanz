@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { MoreVertical, Edit2, Trash2, X } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 
@@ -122,7 +122,7 @@ export default function AssetCardActions({ asset }: { asset: any }) {
               onClick={() => { setIsEditModalOpen(true); setIsOpen(false); }}
               className="w-full flex items-center px-4 py-3 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
             >
-              <Edit2 className="w-4 h-4 mr-3 text-indigo-500" />
+              <Pencil className="w-4 h-4 mr-3 text-indigo-500" />
               Edit Aset
             </button>
             <button
@@ -142,7 +142,7 @@ export default function AssetCardActions({ asset }: { asset: any }) {
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
               <h3 className="font-bold text-slate-900 dark:text-white flex items-center">
-                <Edit2 className="w-4 h-4 text-indigo-500 mr-2" /> Edit Aset
+                <Pencil className="w-4 h-4 text-indigo-500 mr-2" /> Edit Aset
               </h3>
             </div>
             <div className="p-5">

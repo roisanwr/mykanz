@@ -185,6 +185,9 @@ export async function GET() {
         case 'SAHAM':
           stockAssets.push({ assetId: asset.id, ticker: asset.ticker_symbol, currency: asset.currency });
           break;
+        case 'LOGAM_MULIA':
+          stockAssets.push({ assetId: asset.id, ticker: 'GC=F', currency: 'USD' });
+          break;
         default:
           manualAssets.push(asset.id);
           break;
@@ -237,16 +240,22 @@ export async function GET() {
       }
     }
 
-    // Saham — konversi USD → IDR jika perlu
+    // Saham & Emas — konversi USD & Ounce → IDR & Gram jika perlu
     for (const s of stockPriceResults) {
       if (!s.result) continue;
 
       let priceInIdr = s.result.price;
       const nativeCurrency = s.result.currency;
 
+      // Konversi Emas (Troy Ounce ke Gram)
+      // 1 Troy Ounce = 31.1034768 gram
+      if (s.ticker === 'GC=F') {
+        priceInIdr = priceInIdr / 31.1034768; 
+      }
+
       // Jika harga dari Yahoo dalam USD dan ticker bukan saham IDR, konversi
       if (nativeCurrency === 'USD' || (nativeCurrency !== 'IDR' && !s.ticker.endsWith('.JK'))) {
-        priceInIdr = s.result.price * usdToIdr;
+        priceInIdr = priceInIdr * usdToIdr;
       }
 
       prices[s.assetId] = {

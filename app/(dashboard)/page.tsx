@@ -82,15 +82,17 @@ export default async function DashboardPage() {
         <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, oklch(0.72 0.18 55), transparent)' }}></div>
         <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, oklch(0.85 0.12 80), transparent)' }}></div>
         
-        <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <LiveNetWorth
-            initialCash={totalCash}
-            initialInvestment={totalInvestment}
-            variant="hero"
-            show="total"
-          />
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+          <div className="flex-1 min-w-0">
+            <LiveNetWorth
+              initialCash={totalCash}
+              initialInvestment={totalInvestment}
+              variant="hero"
+              show="total"
+            />
+          </div>
           
-          <div className="flex gap-3">
+          <div className="flex gap-3 shrink-0 flex-wrap">
             <Link href="/transactions" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 border border-white/10 shadow-lg shadow-black/20">
               <Plus className="w-4 h-4" /> Catat Kas
             </Link>

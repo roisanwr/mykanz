@@ -92,7 +92,10 @@ export default function LiveNetWorth({
           </span>
         )}
       </p>
-      <h1 className={`font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-none text-white transition-colors duration-500 ${flashClass}`}>
+      <h1 
+        className={`font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-black tracking-tight leading-none text-white transition-colors duration-500 truncate py-1 ${flashClass}`}
+        title={formatRupiah(displayValue)}
+      >
         {formatRupiah(displayValue)}
       </h1>
       {updatedAt && (

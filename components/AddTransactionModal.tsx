@@ -6,13 +6,14 @@ import { createPortal } from 'react-dom';
 import { Plus, X, ArrowRightLeft, ArrowDownLeft, ArrowUpRight, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
+import type { Wallet, Category, TxType } from '@/types';
 
-export default function AddTransactionModal({ wallets, categories }: { wallets: any[], categories: any[] }) {
+export default function AddTransactionModal({ wallets, categories }: { wallets: Wallet[], categories: Category[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // States untuk mengatur form secara dinamis
-  const [txType, setTxType] = useState<'PEMASUKAN' | 'PENGELUARAN' | 'TRANSFER'>('PENGELUARAN');
+  const [txType, setTxType] = useState<TxType>('PENGELUARAN');
   const [sourceWalletId, setSourceWalletId] = useState(wallets[0]?.id || '');
   const [destWalletId, setDestWalletId] = useState(wallets.length > 1 ? wallets[1]?.id : '');
   
@@ -338,7 +339,7 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
                 disabled={isLoading || (txType === 'TRANSFER' && sourceWalletId === destWalletId)}
                 className="flex-[2] px-4 py-3 rounded-xl font-bold text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 transition-colors flex justify-center items-center shadow-lg shadow-orange-500/30"
               >
-                {isLoading ? 'Menyimpan...' : 'Simpan Transaksi'}
+                {isLoading ? 'Menyimpan...' : 'Simpan & Perbarui Saldo'}
               </button>
             </div>
             
@@ -353,10 +354,10 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="flex items-center justify-center gap-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-orange-500/30 hover:scale-105 transition-all duration-300"
+        className="flex items-center justify-center gap-2 bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg shadow-orange-500/30 hover:-translate-y-0.5 hover:shadow-orange-500/50 transition-all duration-300"
       >
         <Plus className="w-5 h-5" />
-        Tambah Transaksi
+        Catat Transaksi
       </button>
 
       {modalContent}

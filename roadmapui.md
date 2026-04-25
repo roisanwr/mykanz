@@ -148,27 +148,28 @@ gsap.fromTo(rows,
 
 ```
 Phase 1 — Critical Fixes:    ✅ 12 items (selesai sesi lalu)
-Phase 2 — Design + GSAP:     ✅  9 items (selesai sesi ini)
-Pending:                      ⏳  9 items
+Phase 2 — Design + GSAP:     ✅  9 items (selesai sesi 2)
+Phase 3 — Final Polish:      ✅  9 items (selesai sesi 3)
+Pending:                      ✅  0 items
 ```
 
 | Item | Priority | Status |
 |---|---|---|
 | Skeleton Loading (semua route) | 🔴 High | ✅ Done |
-| TypeScript props cleanup | 🔴 High | ✅ Done (partial — modal components masih ada `any`) |
+| TypeScript props cleanup | 🔴 High | ✅ Done |
 | Error Boundary | 🔴 High | ✅ Done |
 | GSAP integration | — User Request | ✅ Done |
 | Login page redesign | 🟠 Medium | ✅ Done |
 | LiveNetWorth color fix | 🟠 Medium | ✅ Done |
-| Micro-copy rewrite (AddTransactionModal dll) | 🟠 Medium | 🔜 Pending |
-| Right column dashboard — real content | 🟠 Medium | 🔜 Pending |
-| Modular type scale | 🟡 Low | 🔜 Pending |
-| Semantic color token system | 🟡 Low | 🔜 Pending |
-| Optimistic UI untuk delete | 🟡 Low | 🔜 Pending |
-| Register page redesign | 🟠 Medium | 🔜 Pending |
-| `aria-current="page"` pada nav | 🟡 Low | 🔜 Pending |
-| Keyboard navigation di multi-select | 🟡 Low | 🔜 Pending |
-| Modal components TypeScript (any[] props) | 🔴 High | 🔜 Pending |
+| Micro-copy rewrite (AddTransactionModal dll) | 🟠 Medium | ✅ Done |
+| Right column dashboard — real content | 🟠 Medium | ✅ Done |
+| Modular type scale | 🟡 Low | ✅ Done |
+| Semantic color token system | 🟡 Low | ✅ Done |
+| Optimistic UI untuk delete | 🟡 Low | ✅ Done |
+| Register page redesign | 🟠 Medium | ✅ Done |
+| `aria-current="page"` pada nav | 🟡 Low | ✅ Done |
+| Keyboard navigation di multi-select | 🟡 Low | ✅ Done |
+| Modal components TypeScript (any[] props) | 🔴 High | ✅ Done |
 
 
 

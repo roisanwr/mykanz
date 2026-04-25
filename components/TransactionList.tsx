@@ -14,6 +14,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
   const router = useRouter();
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   const [transactionToDelete, setTransactionToDelete] = useState<FiatTransaction | null>(null);
+  const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
   const [mounted, setMounted] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -40,17 +41,24 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
   }, [transactions]);
 
   const handleDelete = async (id: string) => {
+    // Optimistic UI: immediately hide the transaction
+    setOptimisticDeletedIds(prev => [...prev, id]);
     setIsDeletingId(id);
+    
     try {
       const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!res.ok || result?.error) {
+        // Revert optimistic update
+        setOptimisticDeletedIds(prev => prev.filter(did => did !== id));
         showFeedback(result.error || 'Gagal menghapus transaksi.', 'error');
       } else {
         showFeedback('Transaksi berhasil dihapus', 'delete');
         router.refresh();
       }
     } catch {
+      // Revert optimistic update
+      setOptimisticDeletedIds(prev => prev.filter(did => did !== id));
       showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsDeletingId(null);
@@ -103,7 +111,9 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
   };
 
-  if (transactions.length === 0) {
+  const visibleTransactions = transactions.filter(tx => !optimisticDeletedIds.includes(tx.id));
+
+  if (visibleTransactions.length === 0) {
     return (
       <div className="bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
         <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full mb-4">
@@ -119,7 +129,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
 
   return (
     <div ref={listRef} className="space-y-4">
-      {transactions.map((tx) => {
+      {visibleTransactions.map((tx) => {
         // Tentukan UI berdasarkan Tipe
         let isIncome = false;
         let isTransfer = false;

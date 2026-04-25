@@ -78,8 +78,15 @@ function MultiSelectDropdown({
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const keyHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
     document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener('keydown', keyHandler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('keydown', keyHandler);
+    };
   }, []);
 
   const toggle = (id: string) => {
@@ -108,6 +115,8 @@ function MultiSelectDropdown({
         type="button"
         disabled={disabled}
         onClick={() => setOpen(v => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-sm transition-all text-left
           ${disabled
             ? 'opacity-50 cursor-not-allowed'
@@ -115,7 +124,7 @@ function MultiSelectDropdown({
           ${open
             ? 'border-orange-400 ring-2 ring-orange-500/20 bg-white dark:bg-slate-900'
             : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900'}
-          text-slate-900 dark:text-white focus:outline-none`}
+          text-slate-900 dark:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500`}
       >
         <span className={`truncate ${selectedIds.length === 0 ? 'text-slate-400' : ''}`}>
           {selectedIds.length === 0
@@ -461,9 +470,9 @@ export default function TransactionFilters({ categories, wallets }: Props) {
             <div className="sm:col-span-2">
               <button
                 type="submit"
-                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold px-6 py-2 rounded-xl transition-colors shadow-md shadow-indigo-500/20"
+                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800 text-white text-sm font-bold px-6 py-2 rounded-xl transition-colors shadow-md shadow-orange-500/20"
               >
-                Terapkan Filter Nominal
+                Terapkan
               </button>
             </div>
           </div>

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowUpRight, ArrowDownRight, Wallet, Rocket, 
-  TrendingUp, TrendingDown, Clock, Plus, ArrowRight
+  TrendingUp, TrendingDown, Clock, Plus, ArrowRight, PieChart
 } from 'lucide-react';
 import { Prisma } from '@prisma/client';
 import DashboardCharts from '@/components/DashboardCharts';
@@ -168,7 +168,7 @@ export default async function DashboardPage() {
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-slate-400" /> Transaksi Terakhir
             </h2>
-            <Link href="/transactions" className="text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 flex items-center gap-1 group">
+            <Link href="/transactions" className="text-sm font-bold text-orange-500 dark:text-orange-400 hover:text-orange-600 flex items-center gap-1 group">
               Lihat Semua <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
@@ -196,7 +196,7 @@ export default async function DashboardPage() {
                          <ArrowUpRight className="w-5 h-5" />}
                       </div>
                       <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                        <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors">
                           {tx.categories?.name || 'Lainnya'}
                         </h4>
                         <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -230,17 +230,64 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Right Col: Quick Insights / Future Placeholder */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm flex flex-col items-center justify-center text-center">
-          <div className="bg-orange-50 dark:bg-orange-500/10 p-6 rounded-full mb-4 ring-8 ring-orange-50/50 dark:ring-orange-500/5">
-            <TrendingUp className="w-12 h-12 text-orange-500" />
+        {/* Right Col: Distribusi Kekayaan */}
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
+              <span className="p-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-lg">
+                <PieChart className="w-4 h-4" />
+              </span>
+              Distribusi Kekayaan
+            </h2>
+
+            {netWorth === 0 ? (
+              <div className="h-40 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden group">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest relative z-10 group-hover:scale-105 transition-transform duration-300">Net Worth Nol</p>
+                <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900/50 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors"></div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Visual Bar */}
+                <div className="w-full h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800">
+                  <div 
+                    title={`Kas: Rp ${new Intl.NumberFormat('id-ID').format(totalCash)}`}
+                    className="h-full bg-emerald-500 hover:bg-emerald-400 transition-all hover:brightness-110 cursor-help relative group"
+                    style={{ width: `${(totalCash / netWorth) * 100}%` }}
+                  ></div>
+                  <div 
+                    title={`Investasi: Rp ${new Intl.NumberFormat('id-ID').format(totalInvestment)}`}
+                    className="h-full bg-orange-500 hover:bg-orange-400 transition-all hover:brightness-110 cursor-help relative group"
+                    style={{ width: `${(totalInvestment / netWorth) * 100}%` }}
+                  ></div>
+                </div>
+
+                {/* Legend */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-900 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Kas Bebas</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {((totalCash / netWorth) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-orange-200 dark:hover:border-orange-900 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Investasi</span>
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 dark:text-white">
+                      {((totalInvestment / netWorth) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Perjalanan Bebas Finansial</h3>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">
-            Terus pantau arus kas Kas dan Investasi-mu. Modul Insight yang lebih cerdas akan segera hadir untuk memandumu mencapai tujuan.
-          </p>
-          <Link href="/goals" className="w-full bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-slate-900/20">
-            Lihat Target Impian
+
+          <Link href="/goals" className="mt-8 w-full block text-center bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 text-sm">
+            Atur Target Impian
           </Link>
         </div>
 

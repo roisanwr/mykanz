@@ -281,6 +281,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                                  <Link
                                    key={subItem.path}
                                    href={subItem.path}
+                                   aria-current={isSubActive ? 'page' : undefined}
                                    onClick={() => setIsMobileMenuOpen(false)}
                                    className={`block px-3 pl-12 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                                      isSubActive 
@@ -303,6 +304,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                   return (
                     <li key={item.path}>
                       <Link href={item.path as string} onClick={() => setIsMobileMenuOpen(false)}
+                        aria-current={isActive ? 'page' : undefined}
                         className={`flex items-center px-3 py-3 rounded-xl font-semibold transition-all group relative overflow-hidden
                           ${isActive 
                             ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400' 

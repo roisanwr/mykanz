@@ -1,20 +1,43 @@
 // components/TransactionList.tsx
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFeedback } from '@/components/FeedbackProvider';
 import { useRouter } from 'next/navigation';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X } from 'lucide-react';
+import { gsap } from 'gsap';
+import type { FiatTransaction } from '@/types';
 
-export default function TransactionList({ transactions }: { transactions: any[] }) {
+export default function TransactionList({ transactions }: { transactions: FiatTransaction[] }) {
   const { showFeedback } = useFeedback();
   const router = useRouter();
   const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
-  const [transactionToDelete, setTransactionToDelete] = useState<any | null>(null);
+  const [transactionToDelete, setTransactionToDelete] = useState<FiatTransaction | null>(null);
   const [mounted, setMounted] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // GSAP: stagger transaction rows into view on mount / data change
+  useEffect(() => {
+    const container = listRef.current;
+    if (!container || transactions.length === 0) return;
+
+    const rows = container.querySelectorAll<HTMLElement>('[data-tx-row]');
+    gsap.fromTo(
+      rows,
+      { opacity: 0, y: 14 },
+      {
+        opacity:  1,
+        y:        0,
+        duration: 0.45,
+        stagger:  0.04,
+        ease:     'power3.out',
+        clearProps: 'all',
+      }
+    );
+  }, [transactions]);
 
   const handleDelete = async (id: string) => {
     setIsDeletingId(id);
@@ -86,16 +109,16 @@ export default function TransactionList({ transactions }: { transactions: any[] 
         <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full mb-4">
           <ArrowRightLeft className="w-8 h-8 text-slate-400 dark:text-slate-500" />
         </div>
-        <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Belum Ada Transaksi</h4>
+        <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Daftar Masih Kosong</h4>
         <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">
-          Catat pengeluaran atau pemasukan pertamamu hari ini!
+          Catat pengeluaran atau pemasukan pertamamu hari ini. Setiap rupiah yang dicatat adalah satu langkah lebih dekat ke tujuan.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div ref={listRef} className="space-y-4">
       {transactions.map((tx) => {
         // Tentukan UI berdasarkan Tipe
         let isIncome = false;
@@ -104,7 +127,7 @@ export default function TransactionList({ transactions }: { transactions: any[] 
         let iconColor = '';
         let IconComponent = ArrowUpRight;
         let title = '';
-        let subtitle = new Date(tx.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+        let subtitle = new Date(tx.transaction_date ?? new Date()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
         if (tx.transaction_type === 'PEMASUKAN') {
           isIncome = true;
@@ -128,7 +151,11 @@ export default function TransactionList({ transactions }: { transactions: any[] 
         }
 
         return (
-          <div key={tx.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
+          <div
+            key={tx.id}
+            data-tx-row
+            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+          >
             
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-xl ${bgColor} ${iconColor}`}>

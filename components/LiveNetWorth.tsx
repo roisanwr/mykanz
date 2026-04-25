@@ -78,23 +78,25 @@ export default function LiveNetWorth({
   // Hero variant
   return (
     <div>
-      <p className="text-indigo-200 dark:text-slate-400 font-medium mb-2 flex items-center gap-2">
+      <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2" style={{ color: 'oklch(0.85 0.06 55)' }}>
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
         </span>
         {label || defaultLabel}
         {updatedAt && (
-          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full ml-auto text-indigo-300 font-bold tracking-wider">
+          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full ml-auto font-bold tracking-wider"
+            style={{ color: 'oklch(0.78 0.06 55)' }}
+          >
             🔴 LIVE
           </span>
         )}
       </p>
-      <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-lg transition-colors duration-500 ${flashClass}`}>
+      <h1 className={`font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-none text-white transition-colors duration-500 ${flashClass}`}>
         {formatRupiah(displayValue)}
       </h1>
       {updatedAt && (
-        <p className="text-[10px] text-indigo-300/60 mt-1 font-medium">
+        <p className="text-[10px] mt-2 font-medium" style={{ color: 'oklch(0.60 0.04 55)' }}>
           Terakhir diperbarui: {new Date(updatedAt).toLocaleTimeString('id-ID')}
         </p>
       )}

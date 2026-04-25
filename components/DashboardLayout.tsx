@@ -1,4 +1,3 @@
-// components/DashboardLayout.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -9,6 +8,8 @@ import {
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
   LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown
 } from 'lucide-react'
+import PageTransition from '@/components/shared/PageTransition'
+import type { AppUser } from '@/types'
 
 // Define a type for menu items to fix TS errors
 type MenuItem = {
@@ -38,7 +39,7 @@ const MENU_ITEMS: MenuItem[] = [
   { name: 'Anggaran', path: '/budgets', icon: PieChart },
 ]
 
-export default function DashboardLayout({ children, user }: { children: React.ReactNode, user: any }) {
+export default function DashboardLayout({ children, user }: { children: React.ReactNode, user: AppUser }) {
   const pathname = usePathname()
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -331,8 +332,8 @@ export default function DashboardLayout({ children, user }: { children: React.Re
               
               <ul className="space-y-1.5">
                 <li>
-                  <Link href="/settings" className="flex items-center px-3 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-orange-600 rounded-xl transition-all font-semibold group">
-                    <Settings className="w-5 h-5 mr-3 group-hover:rotate-90 transition-all duration-300" />
+                  <Link href="/settings" className="flex items-center px-3 py-3 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 hover:text-orange-600 rounded-xl transition-colors font-semibold group">
+                    <Settings className="w-5 h-5 mr-3 group-hover:rotate-90 transition-transform duration-300" />
                     <span>Pengaturan</span>
                   </Link>
                 </li>
@@ -351,12 +352,11 @@ export default function DashboardLayout({ children, user }: { children: React.Re
           </aside>
         </div>
 
-        {/* KONTEN UTAMA */}
-        {/* Background putih bersih dengan shadow lembut di mode terang! */}
+        {/* KONTEN UTAMA — wrapped with GSAP PageTransition for smooth route changes */}
         <main className="flex-1 overflow-y-auto rounded-2xl bg-white dark:bg-slate-800/50 backdrop-blur-sm border border-slate-200 dark:border-slate-700/50 shadow-sm transition-colors">
-          <div className="p-4 sm:p-6 lg:p-8 h-full">
+          <PageTransition className="p-4 sm:p-6 lg:p-8 h-full">
             {children}
-          </div>
+          </PageTransition>
         </main>
 
       </div>

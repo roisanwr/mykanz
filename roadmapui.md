@@ -2,10 +2,175 @@
 
 > **Dokumen ini mencatat semua perubahan frontend yang telah dilakukan dan yang masih pending.**
 > Backend tidak disentuh sama sekali. Semua perubahan bersifat pure UI/CSS/React.
+> **Terakhir diperbarui: 2026-04-25 — Sesi Phase 2 (GSAP + Skeleton + TypeScript + Error Boundary)**
 
 ---
 
-## ✅ SUDAH DIPERBAIKI (Eksekusi Sesi Ini)
+## ✅ SUDAH DIPERBAIKI — PHASE 2 (Sesi Ini)
+
+### 13. 🎬 GSAP — Instalasi & Global Setup
+**File:** `package.json`, `components/shared/GSAPProvider.tsx`, `app/layout.tsx`
+
+- Installed `gsap` + `@gsap/react`
+- `GSAPProvider.tsx` — Client component yang register `ScrollTrigger` plugin secara global, set `gsap.defaults({ ease: 'power3.out', duration: 0.5 })`
+- Integrated ke `layout.tsx` — wraps seluruh app
+- Efek: GSAP tersedia di semua client components tanpa re-register
+
+---
+
+### 14. 🚀 GSAP — Page Transitions Seluruh Halaman
+**File:** `components/shared/PageTransition.tsx`, `components/DashboardLayout.tsx`
+
+- `PageTransition.tsx` — Client component yang listen `usePathname()`, trigger GSAP `fromTo` setiap route change
+- Animasi: `opacity 0→1`, `y 18→0`, `filter blur(4px)→blur(0)` dengan `power3.out`
+- Integrated langsung ke main content wrapper di `DashboardLayout.tsx`
+- **Zero CSS animation dipakai** — pure GSAP, fully controllable
+
+```tsx
+// Setiap kali user navigasi ke halaman lain:
+gsap.fromTo(el,
+  { opacity: 0, y: 18, filter: 'blur(4px)' },
+  { opacity: 1, y: 0, filter: 'blur(0px)', duration: 0.55, ease: 'power3.out' }
+)
+```
+
+---
+
+### 15. 📜 GSAP — Scroll Reveal Generic Component
+**File:** `components/shared/GSAPReveal.tsx`
+
+- Generic `<GSAPReveal>` wrapper dengan `ScrollTrigger`
+- Props: `from` (direction), `delay`, `distance`, `stagger` (untuk children)
+- Tersedia untuk dipakai di halaman manapun yang butuh scroll animation
+
+---
+
+### 16. 📋 GSAP — Transaction List Stagger Animation
+**File:** `components/TransactionList.tsx`
+
+- Setiap baris transaksi animate masuk dari bawah dengan stagger 40ms
+- Target: `[data-tx-row]` elements
+- Animasi dipicu ulang setiap kali data `transactions` berubah (filter/pagination)
+
+```tsx
+gsap.fromTo(rows,
+  { opacity: 0, y: 14 },
+  { opacity: 1, y: 0, duration: 0.45, stagger: 0.04, ease: 'power3.out' }
+)
+```
+
+---
+
+### 17. 💀 Skeleton Loading — Semua Route
+**File yang dibuat:**
+- `components/shared/Skeleton.tsx` — Reusable skeleton components
+- `app/(dashboard)/loading.tsx` — Dashboard root
+- `app/(dashboard)/transactions/loading.tsx`
+- `app/(dashboard)/wallets/loading.tsx`
+- `app/(dashboard)/categories/loading.tsx`
+- `app/(dashboard)/goals/loading.tsx`
+- `app/(dashboard)/budgets/loading.tsx`
+- `app/(dashboard)/portfolios/loading.tsx`
+- `app/(dashboard)/settings/loading.tsx`
+- `app/globals.css` — shimmer keyframe `@keyframes shimmer`
+
+**Cara kerja:** Next.js App Router otomatis menampilkan `loading.tsx` sebagai Suspense fallback saat `page.tsx` sedang loading. Zero perubahan pada backend/data fetching.
+
+**Skeleton components tersedia:**
+- `SkeletonHero` — Hero net worth placeholder
+- `SkeletonMetricGrid` — 4 metric cards
+- `SkeletonCard` — Generic data card
+- `SkeletonTransactionRow` — Transaction list row
+- `SkeletonFilterBar` — Filter/search bar
+- `SkeletonLine` — Generic text line
+
+---
+
+### 18. ⚠️ Error Boundary — Dashboard Global
+**File:** `app/(dashboard)/error.tsx`
+
+- Catches semua runtime errors di dashboard routes
+- Tampilkan pesan dalam Bahasa Indonesia yang helpful (bukan "Something went wrong")
+- Shows technical error detail hanya di `development` mode
+- Tombol "Coba Lagi" memanggil `reset()` dari Next.js error boundary
+- Import: `AlertTriangle`, `RefreshCw` dari lucide-react
+
+---
+
+### 19. 🔷 TypeScript — Proper Interface Definitions
+**File:** `types/index.ts`, `components/TransactionList.tsx`, `components/DashboardLayout.tsx`
+
+**Interface yang dibuat:**
+- `AppUser` — auth user object
+- `Wallet` — dompet
+- `Category` — kategori transaksi
+- `TxType` — `'PEMASUKAN' | 'PENGELUARAN' | 'TRANSFER'`
+- `FiatTransaction` — full transaction object dengan semua relations
+- `FilterOption` — untuk multi-select dropdown
+- `ChartDataPoint` — untuk chart data serialization
+
+**Diaplikasikan:**
+- `DashboardLayout`: `user: any` → `user: AppUser`
+- `TransactionList`: `transactions: any[]` → `transactions: FiatTransaction[]`
+- `transactionToDelete: any` → `transactionToDelete: FiatTransaction | null`
+
+---
+
+### 20. 🔐 Login Page — Total Redesign + GSAP
+**File:** `app/(auth)/login/page.tsx`
+
+**Sebelum:** `bg-gray-50` + `text-blue-600` + `bg-blue-600` button — classic AI template
+
+**Sesudah:**
+- Dark OKLCH background `oklch(0.12 0.02 250)` — brand-consistent
+- Glassmorphism card `bg-white/5 backdrop-blur-xl`
+- GSAP entrance animation: card fly-in dari bawah
+- Password visibility toggle (Eye/EyeOff)
+- Proper `aria-label` di semua elements
+- `autoComplete` attributes untuk UX yang lebih baik
+- Brand orange submit button (bukan biru)
+- Error state yang lebih human: "Email atau password tidak tepat. Coba lagi." (bukan generic)
+- Decorative warm amber + emerald radial gradients
+
+---
+
+### 21. 🎨 LiveNetWorth — Color Token Fix
+**File:** `components/LiveNetWorth.tsx`
+
+- Dihapus semua `text-indigo-200`, `text-indigo-300` — sisa AI gradient palette
+- Diganti dengan OKLCH warm amber colors konsisten dengan hero baru
+- `font-display` (Syne) diaplikasikan ke number display
+- Font size hero dinaikkan: `text-5xl sm:text-6xl lg:text-7xl`
+
+---
+
+## 📈 PROGRESS SUMMARY TERBARU
+
+```
+Phase 1 — Critical Fixes:    ✅ 12 items (selesai sesi lalu)
+Phase 2 — Design + GSAP:     ✅  9 items (selesai sesi ini)
+Pending:                      ⏳  9 items
+```
+
+| Item | Priority | Status |
+|---|---|---|
+| Skeleton Loading (semua route) | 🔴 High | ✅ Done |
+| TypeScript props cleanup | 🔴 High | ✅ Done (partial — modal components masih ada `any`) |
+| Error Boundary | 🔴 High | ✅ Done |
+| GSAP integration | — User Request | ✅ Done |
+| Login page redesign | 🟠 Medium | ✅ Done |
+| LiveNetWorth color fix | 🟠 Medium | ✅ Done |
+| Micro-copy rewrite (AddTransactionModal dll) | 🟠 Medium | 🔜 Pending |
+| Right column dashboard — real content | 🟠 Medium | 🔜 Pending |
+| Modular type scale | 🟡 Low | 🔜 Pending |
+| Semantic color token system | 🟡 Low | 🔜 Pending |
+| Optimistic UI untuk delete | 🟡 Low | 🔜 Pending |
+| Register page redesign | 🟠 Medium | 🔜 Pending |
+| `aria-current="page"` pada nav | 🟡 Low | 🔜 Pending |
+| Keyboard navigation di multi-select | 🟡 Low | 🔜 Pending |
+| Modal components TypeScript (any[] props) | 🔴 High | 🔜 Pending |
+
+
 
 ### 1. 🔤 Typography — Ganti Inter dengan Font Pairing Profesional
 **File:** `app/layout.tsx`, `app/globals.css`

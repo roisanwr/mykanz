@@ -1,10 +1,10 @@
-// app/layout.tsx
 import type { Metadata } from 'next'
 import { DM_Sans, Syne } from 'next/font/google'
 import './globals.css'
 import { auth } from '@/lib/auth'
 import DashboardLayout from '@/components/DashboardLayout'
 import { FeedbackProvider } from '@/components/FeedbackProvider'
+import GSAPProvider from '@/components/shared/GSAPProvider'
 
 // DM Sans — body font: readable, modern, NOT overused like Inter
 const dmSans = DM_Sans({
@@ -36,16 +36,17 @@ export default async function RootLayout({
   return (
     <html lang="id" className={`${dmSans.variable} ${syne.variable} light`}>
       <body>
-        <FeedbackProvider>
-          {/* Kalau user login, bungkus dengan DashboardLayout. Kalau nggak (misal di halaman login), biarkan kosong */}
-          {session?.user ? (
-            <DashboardLayout user={session.user}>
-              {children}
-            </DashboardLayout>
-          ) : (
-            children
-          )}
-        </FeedbackProvider>
+        <GSAPProvider>
+          <FeedbackProvider>
+            {session?.user ? (
+              <DashboardLayout user={session.user}>
+                {children}
+              </DashboardLayout>
+            ) : (
+              children
+            )}
+          </FeedbackProvider>
+        </GSAPProvider>
       </body>
     </html>
   )

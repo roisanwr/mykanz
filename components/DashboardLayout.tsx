@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
-  Menu, Bitcoin, Moon, Bell, LayoutDashboard, 
+  Menu, Bitcoin, Moon, Sun, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
   LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown
 } from 'lucide-react'
@@ -111,11 +111,21 @@ export default function DashboardLayout({ children, user }: { children: React.Re
           
           <div className="flex items-center space-x-4 flex-1 justify-start">
             {/* Tombol Menu Mobile */}
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden text-slate-500 hover:text-orange-500 dark:text-slate-400 transition-colors">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi'}
+              aria-expanded={isMobileMenuOpen}
+              className="lg:hidden text-slate-500 hover:text-orange-500 dark:text-slate-400 transition-colors p-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
+            >
               <Menu className="w-6 h-6" />
             </button>
             {/* Tombol Menu Desktop - Mengontrol Hilangnya Sidebar */}
-            <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className="hidden lg:block text-slate-500 hover:text-orange-500 dark:text-slate-400 transition-colors p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-700">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              aria-label={isSidebarCollapsed ? 'Tampilkan sidebar' : 'Sembunyikan sidebar'}
+              aria-expanded={!isSidebarCollapsed}
+              className="hidden lg:block text-slate-500 hover:text-orange-500 dark:text-slate-400 transition-colors p-1.5 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
+            >
               <Menu className="w-5 h-5" />
             </button>
 
@@ -135,13 +145,22 @@ export default function DashboardLayout({ children, user }: { children: React.Re
           </div>
 
           <div className="flex items-center space-x-3 sm:space-x-4 flex-1 justify-end">
-            <button onClick={toggleDarkMode} className="text-slate-500 hover:text-orange-600 dark:text-slate-400 dark:hover:text-orange-400 transition-all hover:rotate-12 p-2">
-              <Moon className="w-5 h-5" />
+            {/* Dark Mode Toggle — correctly shows Sun icon when dark */}
+            <button
+              onClick={toggleDarkMode}
+              aria-label={isDarkMode ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
+              className="text-slate-500 hover:text-orange-600 dark:text-slate-400 dark:hover:text-orange-400 transition-colors p-2 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <button className="relative text-slate-500 hover:text-orange-600 dark:text-slate-400 dark:hover:text-orange-400 transition-all hover:scale-110 p-2">
+            <button
+              aria-label="Notifikasi"
+              aria-haspopup="true"
+              className="relative text-slate-500 hover:text-orange-600 dark:text-slate-400 dark:hover:text-orange-400 transition-colors p-2 rounded-lg hover:bg-orange-50 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50"
+            >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-orange-500 border-2 border-white dark:border-slate-800"></span>
+              <span aria-label="Ada notifikasi baru" className="absolute top-1 right-1 block h-2.5 w-2.5 rounded-full bg-orange-500 border-2 border-white dark:border-slate-800"></span>
             </button>
 
             <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
@@ -149,7 +168,10 @@ export default function DashboardLayout({ children, user }: { children: React.Re
             <div className="relative">
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center focus:outline-none hover:scale-105 transition-transform"
+                aria-label="Buka menu profil"
+                aria-expanded={isProfileOpen}
+                aria-haspopup="true"
+                className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:rounded-xl hover:scale-105 transition-transform"
               >
                 <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold text-sm shadow-md shadow-emerald-500/20 border border-emerald-400/50">
                   {userInitials}
@@ -338,11 +360,6 @@ export default function DashboardLayout({ children, user }: { children: React.Re
         </main>
 
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      `}} />
     </div>
   )
 }

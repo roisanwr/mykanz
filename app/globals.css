@@ -1,13 +1,16 @@
 /* app/globals.css */
 @import "tailwindcss";
 
-/* Tambahkan baris ini untuk mengaktifkan class-based Dark Mode di v4! */
+/* Aktifkan class-based Dark Mode di v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 
-/* Tema Kustom MyKanz */
+/* ══════════════════════════════════════════════════════
+   TEMA KUSTOM MYKANZ — Anti-AI-Slop Edition
+   ══════════════════════════════════════════════════════ */
 @theme {
-  --color-primary-50: #fff7ed;
+  /* Brand Colors — Orange/Amber, unexpected, intentional */
+  --color-primary-50:  #fff7ed;
   --color-primary-100: #ffedd5;
   --color-primary-200: #fed7aa;
   --color-primary-300: #fdba74;
@@ -18,7 +21,8 @@
   --color-primary-800: #9a3412;
   --color-primary-900: #7c2d12;
 
-  --color-wealth-50: #f0fdf4;
+  /* Wealth / Income Green */
+  --color-wealth-50:  #f0fdf4;
   --color-wealth-100: #dcfce7;
   --color-wealth-200: #bbf7d0;
   --color-wealth-300: #86efac;
@@ -29,76 +33,144 @@
   --color-wealth-800: #166534;
   --color-wealth-900: #14532d;
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* ── TYPOGRAPHY — Kill Inter, embrace personality ── */
+  /* DM Sans untuk body: readable, modern, NOT overused */
+  /* Syne untuk display heading: distinctive, geometric */
+  --font-sans:    var(--dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--syne), ui-sans-serif, system-ui, sans-serif;
 
-  --animate-float: float 3s ease-in-out infinite;
+  /* ── ANIMATIONS ── */
+  --animate-float:      float 3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Base Styles & Custom Utilities */
-@layer base {
-  :root {
-    --jarak-atas-header: 12px;
-    --jarak-kiri-kanan: 16px;
-    --jarak-bawah: 12px;
-    --lebar-sidebar: 260px;
-    --jarak-antar-elemen: 20px;
-    --lengkung-kotak: 16px;
-  }
-  
-  body {
-    @apply bg-[#f4f6f8] text-gray-800 font-sans transition-colors duration-300 h-screen overflow-hidden flex flex-col;
-  }
-  
-  /* Dark mode class untuk body */
-  .dark body {
-    @apply bg-[#0f172a] text-gray-100;
-  }
-}
 
-/* Di dalam app/globals.css, ubah bagian ini: */
-@layer base {
-  :root {
-    --jarak-atas-header: 12px;
-    --jarak-kiri-kanan: 16px;
-    --jarak-bawah: 12px;
-    --lebar-sidebar: 260px;
-    --jarak-antar-elemen: 20px;
-    --lengkung-kotak: 16px;
-  }
-  
-  body {
-    /* Hapus h-screen, overflow-hidden, flex, flex-col di sini */
-    @apply bg-[#f4f6f8] text-gray-800 font-sans transition-colors duration-300;
-  }
-  
-  .dark body {
-    @apply bg-[#0f172a] text-gray-100;
-  }
+/* ══════════════════════════════════════════════════════
+   CUSTOM EASING TOKENS — No more "ease-in-out" defaults
+   ══════════════════════════════════════════════════════ */
+:root {
+  /* Layout & Spacing tokens */
+  --jarak-atas-header:  12px;
+  --jarak-kiri-kanan:   16px;
+  --jarak-bawah:        12px;
+  --lebar-sidebar:      260px;
+  --jarak-antar-elemen: 20px;
+  --lengkung-kotak:     16px;
+
+  /* Custom Easing Curves — Professional motion */
+  --ease-out-expo:    cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-expo:     cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+  --ease-spring:      cubic-bezier(0.34, 1.25, 0.64, 1);
+
+  /* Tinted Neutrals — OKLCH, NOT pure gray */
+  /* Background: warm-tinted surface, bukan cold #f4f6f8 */
+  --surface-bg:     oklch(0.965 0.006 60);
+  --surface-bg-dark: oklch(0.145 0.018 250);
 }
 
 
-/* Animasi Keyframes */
+/* ══════════════════════════════════════════════════════
+   BASE STYLES
+   ══════════════════════════════════════════════════════ */
+@layer base {
+  body {
+    /* Tinted neutral background — warm, not cold gray */
+    background-color: var(--surface-bg);
+    @apply text-slate-800 font-sans;
+    transition: background-color 300ms var(--ease-out-expo),
+                color 300ms var(--ease-out-expo);
+  }
+
+  .dark body {
+    background-color: var(--surface-bg-dark);
+    @apply text-slate-100;
+  }
+
+  /* Consistent focus ring — replaces naked focus:outline-none */
+  *:focus-visible {
+    outline: 2px solid oklch(0.72 0.17 55);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════
+   STAGGERED CARD ANIMATION — Anti-symmetric entrance
+   ══════════════════════════════════════════════════════ */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.metric-card {
+  animation: card-enter 0.5s var(--ease-out-expo) both;
+}
+.metric-card:nth-child(1) { animation-delay: 0ms; }
+.metric-card:nth-child(2) { animation-delay: 60ms; }
+.metric-card:nth-child(3) { animation-delay: 120ms; }
+.metric-card:nth-child(4) { animation-delay: 180ms; }
+
+
+/* ══════════════════════════════════════════════════════
+   FONT-DISPLAY UTILITY (Syne for headings)
+   ══════════════════════════════════════════════════════ */
+.font-display {
+  font-family: var(--font-display);
+}
+
+
+/* ══════════════════════════════════════════════════════
+   KEYFRAMES
+   ══════════════════════════════════════════════════════ */
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  50%       { transform: translateY(-5px); }
 }
 
-/* Animasi Harga Live — Flash hijau (naik) / merah (turun) */
+/* Live Price Flash — portofolio real-time indicator */
 @keyframes price-up-flash {
-  0% { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
+  0%   { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
   100% { color: inherit; text-shadow: none; }
 }
 @keyframes price-down-flash {
-  0% { color: #ef4444; text-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+  0%   { color: #ef4444; text-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
   100% { color: inherit; text-shadow: none; }
 }
-.price-flash-up { animation: price-up-flash 1.5s ease-out; }
-.price-flash-down { animation: price-down-flash 1.5s ease-out; }
+.price-flash-up   { animation: price-up-flash   1.5s var(--ease-out-expo); }
+.price-flash-down { animation: price-down-flash 1.5s var(--ease-out-expo); }
 
-/* Scrollbar Custom */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+/* ══════════════════════════════════════════════════════
+   SCROLLBAR CUSTOM
+   ══════════════════════════════════════════════════════ */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 10px; }
 :is(.dark ::-webkit-scrollbar-thumb) { background: #334155; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+/* ══════════════════════════════════════════════════════
+   PREFERS-REDUCED-MOTION — Accessibility mandatory
+   ══════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:        0.01ms !important;
+    animation-iteration-count: 1      !important;
+    transition-duration:       0.01ms !important;
+    scroll-behavior:           auto   !important;
+  }
+}

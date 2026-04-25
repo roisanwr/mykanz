@@ -100,21 +100,24 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
       
-      {/* 1. HERO SECTION: NET WORTH */}
-      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden group">
-        <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
-        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-700"></div>
+      {/* 1. HERO SECTION: NET WORTH — brand-specific, no AI gradient */}
+      <div className="rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
+        {/* Warm glow: brand orange, bukan indigo */}
+        <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, oklch(0.72 0.18 55), transparent)' }}></div>
+        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, oklch(0.85 0.12 80), transparent)' }}></div>
         
         <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
           <div>
-            <p className="text-indigo-200 dark:text-slate-400 font-medium mb-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <p className="text-[oklch(0.85_0.06_55)] text-xs font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Total Kekayaan Bersih
             </p>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight drop-shadow-lg">
+            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-none">
               {formatRupiah(netWorth)}
             </h1>
-            <p className="text-indigo-300 dark:text-slate-400 text-sm mt-3">Halo, {session.user.name}! 👑</p>
+            <p className="text-[oklch(0.78_0.08_55)] text-sm mt-3 font-medium">
+              Halo, {session.user.name}. Hari ini adalah hari yang tepat untuk mencatat.
+            </p>
           </div>
           
           <div className="flex gap-3 flex-wrap">
@@ -128,47 +131,43 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* 2. MAIN METRICS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl text-slate-600 dark:text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
-              <Wallet className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Tunai & Bank</h3>
-          </div>
+      {/* 2. MAIN METRICS GRID — data-forward, staggered entrance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Tunai &amp; Bank</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{formatRupiah(totalCash)}</p>
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
+            <Wallet className="w-3.5 h-3.5 text-emerald-500" />
+            <span>Saldo aktif di dompetmu</span>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl text-slate-600 dark:text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
-              <Rocket className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Nilai Portofolio</h3>
-          </div>
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Nilai Portofolio</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{formatRupiah(totalInvestment)}</p>
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
+            <Rocket className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Estimasi nilai beli</span>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2.5 rounded-xl text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Pemasukan Bulan Ini</h3>
-          </div>
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-2">Pemasukan Bulan Ini</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{formatRupiah(monthlyIncome)}</p>
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-600 dark:text-emerald-500">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Bulan {new Date().toLocaleDateString('id-ID', { month: 'long' })}</span>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-red-50 dark:bg-red-500/10 p-2.5 rounded-xl text-red-600 dark:text-red-400">
-              <TrendingDown className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Pengeluaran Bulan Ini</h3>
-          </div>
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-500 uppercase tracking-widest mb-2">Pengeluaran Bulan Ini</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{formatRupiah(monthlyExpense)}</p>
+          <div className="flex items-center gap-1.5 mt-3 text-xs text-rose-600 dark:text-rose-500">
+            <TrendingDown className="w-3.5 h-3.5" />
+            <span>Bulan {new Date().toLocaleDateString('id-ID', { month: 'long' })}</span>
+          </div>
         </div>
 
       </div>

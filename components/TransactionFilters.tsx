@@ -128,36 +128,38 @@ function MultiSelectDropdown({
       </button>
 
       {open && !disabled && (
-        <div className="absolute z-50 mt-1.5 w-full min-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute z-50 mt-1.5 w-full min-w-[180px] bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-1 duration-150 flex flex-col overflow-hidden max-h-60">
           {/* Clear all */}
           {selectedIds.length > 0 && (
             <button
               type="button"
               onClick={() => onChange([])}
-              className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border-b border-slate-100 dark:border-slate-700 flex items-center gap-1.5 transition-colors"
+              className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border-b border-slate-100 dark:border-slate-700 flex items-center gap-1.5 transition-colors shrink-0"
             >
               <X className="w-3 h-3" /> Hapus semua pilihan
             </button>
           )}
-          {options.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-slate-400 text-center">
-              Tidak ada opsi tersedia
-            </div>
-          ) : (
-            options.map(opt => (
-              <button
-                type="button"
-                key={opt.id}
-                onClick={() => toggle(opt.id)}
-                className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-              >
-                <span className="text-slate-800 dark:text-slate-200">{opt.name}</span>
-                {selectedIds.includes(opt.id) && (
-                  <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                )}
-              </button>
-            ))
-          )}
+          <div className="overflow-y-auto flex-1">
+            {options.length === 0 ? (
+              <div className="px-3 py-3 text-xs text-slate-400 text-center">
+                Tidak ada opsi tersedia
+              </div>
+            ) : (
+              options.map(opt => (
+                <button
+                  type="button"
+                  key={opt.id}
+                  onClick={() => toggle(opt.id)}
+                  className="w-full text-left px-3 py-2.5 text-sm flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                >
+                  <span className="text-slate-800 dark:text-slate-200">{opt.name}</span>
+                  {selectedIds.includes(opt.id) && (
+                    <Check className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                  )}
+                </button>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>

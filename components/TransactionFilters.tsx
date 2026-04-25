@@ -271,9 +271,8 @@ export default function TransactionFilters({ categories, wallets }: Props) {
     return currentStartDate === startDate && currentEndDate === endDate;
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden mb-6">
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm mb-6">
 
       {/* ── Header bar ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 md:px-5 py-3.5 border-b border-slate-100 dark:border-slate-700/50">

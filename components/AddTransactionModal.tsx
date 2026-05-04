@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 import type { Wallet, Category, TxType } from '@/types';
 
-export default function AddTransactionModal({ wallets, categories, events = [] }: { wallets: Wallet[], categories: Category[], events?: any[] }) {
+export default function AddTransactionModal({ wallets, categories, events = [], defaultEventId }: { wallets: Wallet[], categories: Category[], events?: any[], defaultEventId?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -275,6 +275,7 @@ export default function AddTransactionModal({ wallets, categories, events = [] }
                   </label>
                   <select 
                     name="event_id" 
+                    defaultValue={defaultEventId || ""}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                   >
                     <option value="">Pilih Event...</option>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, FileText, Wallet } from 'lucide-react';
 import TransactionList from '@/components/TransactionList';
 import AssignTransactionToEventModal from '@/components/AssignTransactionToEventModal';
+import AddTransactionModal from '@/components/AddTransactionModal';
 
 export default async function EventDetailPage(props: {
   params: Promise<{ id: string }>
@@ -32,6 +33,22 @@ export default async function EventDetailPage(props: {
   if (!event) {
     redirect('/events');
   }
+
+  // Fetch Wallets & Categories for the AddTransactionModal
+  const [wallets, categories, events] = await Promise.all([
+    prisma.wallets.findMany({
+      where: { user_id: session.user.id, deleted_at: null },
+      select: { id: true, name: true, currency: true }
+    }),
+    prisma.categories.findMany({
+      where: { user_id: session.user.id, deleted_at: null },
+      select: { id: true, name: true, type: true }
+    }),
+    prisma.events.findMany({
+      where: { user_id: session.user.id },
+      select: { id: true, name: true }
+    }),
+  ]);
 
   const transactions = event.fiat_transactions.map(tx => ({
     ...tx,
@@ -173,7 +190,10 @@ export default async function EventDetailPage(props: {
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">
               Transaksi Terkait ({transactions.length})
             </h3>
-            <AssignTransactionToEventModal eventId={event.id} />
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <AssignTransactionToEventModal eventId={event.id} />
+              <AddTransactionModal wallets={wallets} categories={categories} events={events as any[]} defaultEventId={event.id} />
+            </div>
           </div>
 
           <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-1">

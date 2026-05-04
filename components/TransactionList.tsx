@@ -173,7 +173,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
               </div>
               <div>
                 <h4 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">
-                  {title}
+                  {title} {tx.events?.name && <span className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 px-2 py-0.5 rounded-md ml-1 font-bold align-middle uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[120px]" title={tx.events.name}>📌 {tx.events.name}</span>}
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                   {subtitle}

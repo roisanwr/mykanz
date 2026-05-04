@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
 import type { Wallet, Category, TxType } from '@/types';
 
-export default function AddTransactionModal({ wallets, categories }: { wallets: Wallet[], categories: Category[] }) {
+export default function AddTransactionModal({ wallets, categories, events = [] }: { wallets: Wallet[], categories: Category[], events?: any[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -75,6 +75,7 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
       payload.admin_fee = parseFloat(rawAdminFee) || 0;
     } else {
       payload.category_id = formData.get('category_id') as string || null;
+      payload.event_id = formData.get('event_id') as string || null;
     }
 
     try {
@@ -251,20 +252,37 @@ export default function AddTransactionModal({ wallets, categories }: { wallets: 
 
             {/* KATEGORI (Hanya untuk Pemasukan / Pengeluaran) */}
             {txType !== 'TRANSFER' && (
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Kategori
-                </label>
-                <select 
-                  name="category_id" 
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
-                >
-                  <option value="">Tanpa Kategori</option>
-                  {/* Filter kategori sesuai tipe. Anggap type di kategori sama dengan transaksi (PEMASUKAN/PENGELUARAN) */}
-                  {categories.filter(c => c.type === txType).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Kategori
+                  </label>
+                  <select 
+                    name="category_id" 
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  >
+                    <option value="">Tanpa Kategori</option>
+                    {/* Filter kategori sesuai tipe. Anggap type di kategori sama dengan transaksi (PEMASUKAN/PENGELUARAN) */}
+                    {categories.filter(c => c.type === txType).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Event <span className="text-xs font-normal text-slate-500">(Opsional)</span>
+                  </label>
+                  <select 
+                    name="event_id" 
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  >
+                    <option value="">Pilih Event...</option>
+                    {events.map(e => (
+                      <option key={e.id} value={e.id}>{e.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             )}
 

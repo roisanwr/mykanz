@@ -68,6 +68,7 @@ export async function POST(req: Request) {
       description = null,
       transaction_date,
       category_id,
+      event_id,
       to_wallet_id,
       admin_fee = 0,
     } = body;
@@ -141,6 +142,7 @@ export async function POST(req: Request) {
       await prisma.$transaction(prismaOps);
     } else {
       if (category_id) payload.category_id = category_id;
+      if (event_id) payload.event_id = event_id;
       await prisma.fiat_transactions.create({ data: payload });
     }
 

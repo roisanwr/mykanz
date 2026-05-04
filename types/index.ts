@@ -22,6 +22,16 @@ export interface Category {
   type?: string;
 }
 
+export interface Event {
+  id:          string;
+  name:        string;
+  description?: string | null;
+  start_date:  Date | string;
+  end_date:    Date | string;
+  budget_limit?: number | null;
+  created_at?: Date | string | null;
+}
+
 // ─── Fiat Transactions ───────────────────────────────────────────────────────
 export type TxType = 'PEMASUKAN' | 'PENGELUARAN' | 'TRANSFER';
 
@@ -32,9 +42,13 @@ export interface FiatTransaction {
   description?:     string | null;
   transaction_date: Date | string | null;
   exchange_rate?:   number | null;
+  event_id?:        string | null;
   categories?: {
     name: string;
     type: string;
+  } | null;
+  events?: {
+    name: string;
   } | null;
   wallets_fiat_transactions_wallet_idTowallets: {
     name:     string;

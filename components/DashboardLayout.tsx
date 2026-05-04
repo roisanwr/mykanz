@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { 
   Menu, Bitcoin, Moon, Sun, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
-  LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown
+  LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown, CalendarRange
 } from 'lucide-react'
 import PageTransition from '@/components/shared/PageTransition'
 import type { AppUser } from '@/types'
@@ -24,6 +24,7 @@ const MENU_ITEMS: MenuItem[] = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Dompet & Kas', path: '/wallets', icon: Wallet },
   { name: 'Transaksi', path: '/transactions', icon: ArrowRightLeft },
+  { name: 'Event', path: '/events', icon: CalendarRange },
   { name: 'Kategori', path: '/categories', icon: Tags },
   { 
     name: 'Portofolio', 

@@ -32,7 +32,7 @@ export default async function TransactionsPage(props: {
   const currentPage = Math.max(1, parseInt(page || '1', 10));
 
   // Fetch Wallets & Categories for the filter UI (lightweight)
-  const [wallets, categories] = await Promise.all([
+  const [wallets, categories, events] = await Promise.all([
     prisma.wallets.findMany({
       where: { user_id: session.user.id, deleted_at: null },
       select: { id: true, name: true, currency: true }
@@ -40,6 +40,10 @@ export default async function TransactionsPage(props: {
     prisma.categories.findMany({
       where: { user_id: session.user.id, deleted_at: null },
       select: { id: true, name: true, type: true }
+    }),
+    prisma.events.findMany({
+      where: { user_id: session.user.id },
+      select: { id: true, name: true }
     }),
   ]);
 
@@ -114,6 +118,7 @@ export default async function TransactionsPage(props: {
     take: PAGE_SIZE,
     include: {
       categories: { select: { name: true, type: true } },
+      events: { select: { name: true } },
       wallets_fiat_transactions_wallet_idTowallets:    { select: { name: true, currency: true } },
       wallets_fiat_transactions_to_wallet_idTowallets: { select: { name: true, currency: true } },
     },
@@ -148,7 +153,7 @@ export default async function TransactionsPage(props: {
             )}
           </p>
         </div>
-        <AddTransactionModal wallets={wallets} categories={categories} />
+        <AddTransactionModal wallets={wallets} categories={categories} events={events as any[]} />
       </div>
 
       {/* ── SUMMARY STATS (based on ALL matching rows, not just current page) ─── */}

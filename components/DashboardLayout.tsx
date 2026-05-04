@@ -301,7 +301,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                   }
 
                   // Normal Link rendering (No SubItems)
-                  const isActive = pathname === item.path
+                  const isActive = item.path === '/' ? pathname === '/' : pathname.startsWith(item.path as string)
                   return (
                     <li key={item.path}>
                       <Link href={item.path as string} onClick={() => setIsMobileMenuOpen(false)}

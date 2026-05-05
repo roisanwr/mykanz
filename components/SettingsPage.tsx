@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Lock, Download, Trash2, Save, Eye, EyeOff,
-  ShieldAlert, FileDown, CheckCircle2, Loader2, Mail, Bot, Copy
+  ShieldAlert, FileDown, CheckCircle2, Loader2, Mail, Bot, Copy, ExternalLink,
+  MessageCircle, Camera, Type
 } from 'lucide-react';
 import { useFeedback } from '@/components/FeedbackProvider';
 
@@ -126,6 +127,13 @@ export default function SettingsPage({ user }: { user: UserData }) {
   // ── Telegram Bot ──────────────────────────────────────────
   const [tgConnected, setTgConnected] = useState(false);
   const [tgToken, setTgToken] = useState('');
+  const [tgCopied, setTgCopied] = useState(false);
+
+  const handleCopyCommand = (token: string) => {
+    navigator.clipboard.writeText(`/connect ${token}`);
+    setTgCopied(true);
+    setTimeout(() => setTgCopied(false), 2000);
+  };
   const [tgLoading, setTgLoading] = useState(true);
 
   useEffect(() => {
@@ -486,14 +494,48 @@ export default function SettingsPage({ user }: { user: UserData }) {
                       <div className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl p-5 text-center">
                         <h3 className="font-bold text-orange-800 dark:text-orange-400 mb-2">Token Berhasil Dibuat</h3>
                         <p className="text-sm text-orange-600 dark:text-orange-500 mb-4">Buka bot Telegram @mykanz_bot dan kirimkan perintah ini:</p>
-                        <div className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 py-3 px-4 rounded-lg border border-orange-100 dark:border-orange-900/30 font-mono text-slate-900 dark:text-white font-bold select-all">
-                          /connect {tgToken}
+                        <div className="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 py-3 px-4 rounded-lg border border-orange-100 dark:border-orange-900/30">
+                          <code className="font-mono text-slate-900 dark:text-white font-bold text-sm">/connect {tgToken}</code>
+                          <button onClick={() => handleCopyCommand(tgToken)} className="shrink-0 p-1.5 rounded-md hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                            {tgCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4 text-orange-500" />}
+                          </button>
                         </div>
-                        <p className="text-xs text-orange-500/70 mt-3">Token ini akan hangus dalam 5 menit.</p>
+                        <p className="text-xs text-orange-500/70 mt-3">⏰ Token ini akan hangus dalam 5 menit.</p>
+                        <a href="https://t.me/mykanz_bot" target="_blank" rel="noopener noreferrer"
+                          className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-sky-500 hover:text-sky-600">
+                          Buka @mykanz_bot <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
                       </div>
                     )}
                   </div>
                 )}
+                {/* Panduan Penggunaan */}
+                <div className="border-t border-slate-100 dark:border-slate-700 pt-5">
+                  <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">📖 Cara Pakai Bot</h3>
+                  <div className="space-y-3">
+                    <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                      <Camera className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Kirim foto struk</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">AI akan membaca struk dan membantu kamu mencatat pengeluaran.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                      <Type className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Ketik langsung</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Contoh: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">beli kopi 35000</code> atau <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">terima gaji 5000000</code></p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                      <MessageCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Perintah bot</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400"><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/help</code> — daftar perintah · <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded text-xs">/status</code> — cek koneksi akun</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

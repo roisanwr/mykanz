@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Lock, Download, Trash2, Save, Eye, EyeOff,
-  ShieldAlert, FileDown, CheckCircle2, Loader2, Mail,
+  ShieldAlert, FileDown, CheckCircle2, Loader2, Mail, Bot, Copy
 } from 'lucide-react';
 import { useFeedback } from '@/components/FeedbackProvider';
 
-type Section = 'profile' | 'password' | 'export' | 'danger';
+type Section = 'profile' | 'password' | 'export' | 'telegram' | 'danger';
 
 interface UserData {
   id: string;
@@ -123,11 +123,54 @@ export default function SettingsPage({ user }: { user: UserData }) {
     setDeleteLoading(false);
   };
 
+  // ── Telegram Bot ──────────────────────────────────────────
+  const [tgConnected, setTgConnected] = useState(false);
+  const [tgToken, setTgToken] = useState('');
+  const [tgLoading, setTgLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/telegram/status')
+      .then(res => res.json())
+      .then(data => { setTgConnected(data.connected); setTgLoading(false); })
+      .catch(() => setTgLoading(false));
+  }, []);
+
+  const handleGenerateTgToken = async () => {
+    setTgLoading(true);
+    try {
+      const res = await fetch('/api/telegram/generate-token', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) setTgToken(data.token);
+      else showFeedback('Gagal generate token', 'error');
+    } catch {
+      showFeedback('Gagal terhubung ke server', 'error');
+    }
+    setTgLoading(false);
+  };
+
+  const handleDisconnectTg = async () => {
+    setTgLoading(true);
+    try {
+      const res = await fetch('/api/telegram/status', { method: 'DELETE' });
+      if (res.ok) {
+        setTgConnected(false);
+        setTgToken('');
+        showFeedback('Koneksi Telegram diputus', 'success');
+      } else {
+        showFeedback('Gagal memutuskan koneksi', 'error');
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server', 'error');
+    }
+    setTgLoading(false);
+  };
+
   // ── Nav Items ─────────────────────────────────────────────
   const navItems: { id: Section; label: string; icon: React.ElementType; danger?: boolean }[] = [
     { id: 'profile', label: 'Edit Profil', icon: User },
     { id: 'password', label: 'Ganti Password', icon: Lock },
     { id: 'export', label: 'Export Data', icon: Download },
+    { id: 'telegram', label: 'Telegram Bot', icon: Bot },
     { id: 'danger', label: 'Hapus Akun', icon: Trash2, danger: true },
   ];
 
@@ -400,6 +443,57 @@ export default function SettingsPage({ user }: { user: UserData }) {
                 <p className="text-xs text-slate-400 dark:text-slate-500 pt-2">
                   💡 File CSV dapat dibuka dengan Microsoft Excel, Google Sheets, atau aplikasi spreadsheet lainnya.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Telegram Bot ── */}
+          {activeSection === 'telegram' && (
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-orange-500" /> Integrasi Telegram
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Catat transaksi lebih cepat via bot Telegram @mykanz_bot.</p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {tgLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
+                ) : tgConnected ? (
+                  <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-5 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mb-3">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h3 className="font-bold text-emerald-800 dark:text-emerald-400 mb-1">Akun Terhubung!</h3>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mb-4">Kamu sudah bisa mencatat transaksi lewat Telegram.</p>
+                    <button onClick={handleDisconnectTg} className="text-sm font-semibold text-red-500 hover:text-red-600 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-red-100 dark:border-red-900/30">
+                      Putuskan Koneksi
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    {!tgToken ? (
+                      <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl p-5 text-center">
+                        <Bot className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                        <h3 className="font-bold text-slate-900 dark:text-white mb-2">Hubungkan Telegram</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">Dapatkan token untuk menghubungkan akun MyKanz dengan Telegram.</p>
+                        <button onClick={handleGenerateTgToken} className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-orange-500/25 transition-all">
+                          Generate Token
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-xl p-5 text-center">
+                        <h3 className="font-bold text-orange-800 dark:text-orange-400 mb-2">Token Berhasil Dibuat</h3>
+                        <p className="text-sm text-orange-600 dark:text-orange-500 mb-4">Buka bot Telegram @mykanz_bot dan kirimkan perintah ini:</p>
+                        <div className="flex items-center justify-center gap-2 bg-white dark:bg-slate-900 py-3 px-4 rounded-lg border border-orange-100 dark:border-orange-900/30 font-mono text-slate-900 dark:text-white font-bold select-all">
+                          /connect {tgToken}
+                        </div>
+                        <p className="text-xs text-orange-500/70 mt-3">Token ini akan hangus dalam 5 menit.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -132,7 +132,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
             </button>
 
             <Link href="/" className="flex items-center space-x-3 group cursor-pointer">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 shadow-lg shadow-orange-500/30 group-hover:scale-105 transition-transform duration-300">
+              <div className="flex items-center justify-center w-10 h-10 rounded-none bg-[oklch(0.65_0.2_35)] shadow-[4px_4px_0px_oklch(0.4_0.1_35)] group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-hover:shadow-[2px_2px_0px_oklch(0.4_0.1_35)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                 <Bitcoin className="w-6 h-6 text-white drop-shadow-md" />
               </div>
               <div className="flex flex-col">
@@ -173,9 +173,9 @@ export default function DashboardLayout({ children, user }: { children: React.Re
                 aria-label="Buka menu profil"
                 aria-expanded={isProfileOpen}
                 aria-haspopup="true"
-                className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:rounded-xl hover:scale-105 transition-transform"
+                className="flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/50 focus-visible:rounded-none hover:scale-105 transition-transform ease-[cubic-bezier(0.16,1,0.3,1)]"
               >
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white rounded-xl w-10 h-10 flex items-center justify-center font-bold text-sm shadow-md shadow-emerald-500/20 border border-emerald-400/50">
+                <div className="bg-[oklch(0.55_0.15_150)] text-white rounded-none w-10 h-10 flex items-center justify-center font-bold text-sm border-2 border-[oklch(0.3_0.1_150)] shadow-[2px_2px_0px_oklch(0.3_0.1_150)]">
                   {userInitials}
                 </div>
               </button>
@@ -343,7 +343,7 @@ export default function DashboardLayout({ children, user }: { children: React.Re
               </ul>
 
               <div className="mt-auto pt-8">
-                <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-700/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 relative overflow-hidden group hover:border-orange-300 dark:hover:border-orange-500/50 transition-colors shadow-sm">
+                <div className="bg-[oklch(0.98_0.01_60)] dark:bg-[oklch(0.2_0.02_250)] border-l-4 border-[oklch(0.65_0.2_35)] rounded-r-2xl p-5 relative overflow-hidden group hover:bg-[oklch(0.96_0.02_60)] transition-colors shadow-none">
                   <Leaf className="absolute -right-3 -top-3 w-16 h-16 text-emerald-500/10 dark:text-emerald-400/5 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-500" />
                   <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 relative z-10 leading-relaxed">
                     "Kekayaan sejati adalah waktu luangmu."

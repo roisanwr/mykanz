@@ -36,7 +36,7 @@ export default function PageTransition({ children, className }: PageTransitionPr
         y:         0,
         filter:    'blur(0px)',
         duration:  0.55,
-        ease:      'power3.out',
+        ease:      'expo.out',
         clearProps: 'filter', // cleanup blur after animation
       }
     );

@@ -176,6 +176,54 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
+    // Cek apakah sedang menunggu input teks untuk nama kategori baru
+    const sessionForText = await prisma.telegram_sessions.findFirst({
+      where: { telegram_chat_id: chatId, state: 'AWAITING_NEW_CATEGORY_NAME' },
+      orderBy: { created_at: 'desc' }
+    });
+
+    if (sessionForText && text && !text.startsWith('/')) {
+      const parsedData = JSON.parse(sessionForText.data || '{}');
+
+      // Buat kategori baru di DB
+      const newCategory = await prisma.categories.create({
+        data: {
+          user_id: sessionForText.user_id,
+          name: text.trim(),
+          type: parsedData.type as fiat_tx_type
+        }
+      });
+
+      parsedData.category_id = newCategory.id;
+      parsedData.category_name = newCategory.name;
+
+      await prisma.telegram_sessions.update({
+        where: { id: sessionForText.id },
+        data: { state: 'AWAITING_CONFIRMATION', data: JSON.stringify(parsedData) }
+      });
+
+      const typeEmoji = parsedData.type === 'PEMASUKAN' ? '📈' : '📉';
+      const summaryText =
+        `📝 <b>Konfirmasi Transaksi</b>\n\n` +
+        `${typeEmoji} Tipe: <b>${parsedData.type}</b>\n` +
+        `💰 Jumlah: <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
+        `🗂 Kategori: <b>${newCategory.name}</b>\n` +
+        `💳 Dompet: <b>${parsedData.wallet_name}</b>\n` +
+        `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
+        `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
+        `Apakah data ini sudah benar?`;
+
+      await sendMessage(chatId, summaryText, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '✅ Ya, Simpan', callback_data: 'action:save' }],
+            [{ text: '❌ Batalkan', callback_data: 'action:cancel' }]
+          ]
+        }
+      });
+      return NextResponse.json({ ok: true });
+    }
+
     // H. Handle Foto atau Teks Bebas → Pipeline AI
     if (message.photo || (text && !text.startsWith('/'))) {
       await sendMessage(chatId, '⏳ Memproses dengan AI, sebentar...');
@@ -288,56 +336,97 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
 
     await prisma.telegram_sessions.update({
       where: { id: session.id },
-      data: { state: 'AWAITING_CONFIRMATION', data: JSON.stringify(parsedData) }
+      data: { state: 'AWAITING_CATEGORY', data: JSON.stringify(parsedData) }
     });
 
-    const typeEmoji = parsedData.type === 'PEMASUKAN' ? '📈' : '📉';
-    const summaryText =
-      `📝 <b>Konfirmasi Transaksi</b>\n\n` +
-      `${typeEmoji} Tipe: <b>${parsedData.type}</b>\n` +
-      `💰 Jumlah: <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
-      `🗂 Kategori: ${parsedData.category_guess}\n` +
-      `💳 Dompet: ${wallet.name}\n` +
-      `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
-      `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
-      `Apakah data ini sudah benar?`;
-
-    await editMessageText(chatId, messageId, summaryText, {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '✅ Ya, Simpan', callback_data: 'action:save' }],
-          [{ text: '❌ Batalkan', callback_data: 'action:cancel' }]
-        ]
-      }
+    const categories = await prisma.categories.findMany({
+      where: { user_id: session.user_id, type: parsedData.type as fiat_tx_type, deleted_at: null },
+      orderBy: { name: 'asc' }
     });
+
+    const keyboard = {
+      inline_keyboard: [
+        ...categories.map(c => [{ text: `🗂 ${c.name}`, callback_data: `category:${c.id}` }]),
+        [{ text: '➕ Tambah Kategori Baru', callback_data: 'action:new_category' }],
+        [{ text: '❌ Batal', callback_data: 'action:cancel' }]
+      ]
+    };
+
+    await editMessageText(chatId, messageId,
+      `💳 Dompet terpilih: <b>${wallet.name}</b>\n\n` +
+      `Tebakan AI Kategori: ${parsedData.category_guess}\n\n` +
+      `Silakan pilih kategori dari daftar di bawah ini atau tambah baru:`,
+      { reply_markup: keyboard }
+    );
+
     await answerCallbackQuery(queryId);
     return;
   }
 
-  // --- TAHAP 2: Konfirmasi Simpan ---
-  if (session.state === 'AWAITING_CONFIRMATION') {
-    if (actionData === 'action:save') {
-      // Cari kategori yang cocok (case-insensitive)
-      let category = await prisma.categories.findFirst({
-        where: {
-          user_id: session.user_id,
-          name: { equals: parsedData.category_guess, mode: 'insensitive' },
-          type: parsedData.type as fiat_tx_type
-        }
-      });
+  // --- TAHAP 2: Pilih Kategori ---
+  if (session.state === 'AWAITING_CATEGORY') {
+    if (actionData.startsWith('category:')) {
+      const categoryId = actionData.split(':')[1];
+      const category = await prisma.categories.findFirst({ where: { id: categoryId, user_id: session.user_id } });
 
-      // Fallback ke "Lainnya"
       if (!category) {
-        category = await prisma.categories.findFirst({
-          where: { user_id: session.user_id, name: { contains: 'lain', mode: 'insensitive' }, type: parsedData.type as fiat_tx_type }
-        });
+        await answerCallbackQuery(queryId, 'Kategori tidak ditemukan.', true);
+        return;
       }
 
+      parsedData.category_id = category.id;
+      parsedData.category_name = category.name;
+
+      await prisma.telegram_sessions.update({
+        where: { id: session.id },
+        data: { state: 'AWAITING_CONFIRMATION', data: JSON.stringify(parsedData) }
+      });
+
+      const typeEmoji = parsedData.type === 'PEMASUKAN' ? '📈' : '📉';
+      const summaryText =
+        `📝 <b>Konfirmasi Transaksi</b>\n\n` +
+        `${typeEmoji} Tipe: <b>${parsedData.type}</b>\n` +
+        `💰 Jumlah: <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
+        `🗂 Kategori: <b>${category.name}</b>\n` +
+        `💳 Dompet: <b>${parsedData.wallet_name}</b>\n` +
+        `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
+        `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
+        `Apakah data ini sudah benar?`;
+
+      await editMessageText(chatId, messageId, summaryText, {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '✅ Ya, Simpan', callback_data: 'action:save' }],
+            [{ text: '❌ Batalkan', callback_data: 'action:cancel' }]
+          ]
+        }
+      });
+      await answerCallbackQuery(queryId);
+      return;
+    } else if (actionData === 'action:new_category') {
+      await prisma.telegram_sessions.update({
+        where: { id: session.id },
+        data: { state: 'AWAITING_NEW_CATEGORY_NAME' }
+      });
+      await editMessageText(chatId, messageId, 'Ketikkan nama kategori baru yang ingin ditambahkan:');
+      await answerCallbackQuery(queryId);
+      return;
+    } else if (actionData === 'action:cancel') {
+      await prisma.telegram_sessions.delete({ where: { id: session.id } });
+      await editMessageText(chatId, messageId, '❌ Transaksi dibatalkan.');
+      await answerCallbackQuery(queryId);
+      return;
+    }
+  }
+
+  // --- TAHAP 3: Konfirmasi Simpan ---
+  if (session.state === 'AWAITING_CONFIRMATION') {
+    if (actionData === 'action:save') {
       await prisma.fiat_transactions.create({
         data: {
           user_id: session.user_id,
           wallet_id: parsedData.wallet_id,
-          category_id: category?.id ?? null,
+          category_id: parsedData.category_id,
           transaction_type: parsedData.type as fiat_tx_type,
           amount: parsedData.amount,
           description: parsedData.items_summary || parsedData.store_name || 'Dicatat via Telegram Bot',

@@ -50,7 +50,7 @@ export default async function EventDetailPage(props: {
     }),
   ]);
 
-  const transactions = event.fiat_transactions.map(tx => ({
+  const transactions = event.fiat_transactions.map((tx) => ({
     ...tx,
     amount: Number(tx.amount),
     exchange_rate: tx.exchange_rate ? Number(tx.exchange_rate) : null,
@@ -59,7 +59,7 @@ export default async function EventDetailPage(props: {
   let totalExpense = 0;
   let totalIncome = 0;
 
-  transactions.forEach(tx => {
+  transactions.forEach((tx) => {
     if (tx.transaction_type === 'PENGELUARAN') {
       totalExpense += tx.amount;
     } else if (tx.transaction_type === 'PEMASUKAN') {

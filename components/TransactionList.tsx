@@ -7,6 +7,7 @@ import { useFeedback } from '@/components/FeedbackProvider';
 import { useRouter } from 'next/navigation';
 import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X } from 'lucide-react';
 import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import type { FiatTransaction } from '@/types';
 
 export default function TransactionList({ transactions }: { transactions: FiatTransaction[] }) {
@@ -21,24 +22,26 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
   useEffect(() => setMounted(true), []);
 
   // GSAP: stagger transaction rows into view on mount / data change
-  useEffect(() => {
+  // Menggunakan useGSAP untuk integrasi React 19 yang lebih baik
+  useGSAP(() => {
     const container = listRef.current;
     if (!container || transactions.length === 0) return;
 
     const rows = container.querySelectorAll<HTMLElement>('[data-tx-row]');
     gsap.fromTo(
       rows,
-      { opacity: 0, y: 14 },
+      { opacity: 0, y: 14, filter: 'blur(4px)' },
       {
         opacity:  1,
         y:        0,
-        duration: 0.45,
-        stagger:  0.04,
-        ease:     'cubic-bezier(0.16,1,0.3,1)',
+        filter:   'blur(0px)',
+        duration: 0.5,
+        stagger:  0.05,
+        ease:     'yui', // Menggunakan global ease Yui
         clearProps: 'all',
       }
     );
-  }, [transactions]);
+  }, { dependencies: [transactions], scope: listRef });
 
   const handleDelete = async (id: string) => {
     // Optimistic UI: immediately hide the transaction

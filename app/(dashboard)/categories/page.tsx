@@ -15,10 +15,10 @@ export default async function CategoriesPage() {
     orderBy: { created_at: 'desc' }
   });
 
-  const pemasukan = categories.filter(c => c.type === 'PEMASUKAN');
-  const pengeluaran = categories.filter(c => c.type === 'PENGELUARAN');
+  const pemasukan = categories.filter((c) => c.type === 'PEMASUKAN');
+  const pengeluaran = categories.filter((c) => c.type === 'PENGELUARAN');
 
-  const renderCategoryCard = (category: any) => (
+  const renderCategoryCard = (category: typeof categories[0]) => (
     <div key={category.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center justify-between hover:border-slate-300 dark:hover:border-slate-600 transition-colors group">
       <div className="flex items-center gap-3">
         <div className={`p-2.5 rounded-xl ${category.type === 'PEMASUKAN' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'}`}>

@@ -2,9 +2,10 @@
 // Generic scroll-triggered reveal component — use to animate any content into view
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 
 interface GSAPRevealProps {
   children:    React.ReactNode;
@@ -29,7 +30,7 @@ export default function GSAPReveal({
 }: GSAPRevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useGSAP(() => {
     const el = ref.current;
     if (!el) return;
 
@@ -39,29 +40,29 @@ export default function GSAPReveal({
       opacity: 0,
       y:       from === 'bottom' ? distance : from === 'top'   ? -distance : 0,
       x:       from === 'left'   ? -distance : from === 'right' ? distance  : 0,
+      clipPath: 'inset(10% 0% 10% 0%)', // Premium masking reveal
+      scale: 0.98,
     };
 
     const toVars: gsap.TweenVars = {
       opacity:  1,
       y:        0,
       x:        0,
-      duration: 0.6,
-      ease:     'power3.out',
+      clipPath: 'inset(0% 0% 0% 0%)',
+      scale: 1,
+      duration: 0.8, // Slightly longer
+      ease:     'yui', // Yui's global ease
       delay,
       stagger:  stagger || 0,
       scrollTrigger: {
         trigger:      el,
-        start:        'top 88%',
+        start:        'top 90%', // Trigger slightly earlier
         once:         true,
       },
     };
 
-    const tween = gsap.fromTo(targets, fromVars, toVars);
-
-    return () => {
-      tween.kill();
-    };
-  }, [delay, distance, from, stagger]);
+    gsap.fromTo(targets, fromVars, toVars);
+  }, { dependencies: [delay, distance, from, stagger], scope: ref });
 
   return (
     <div ref={ref} className={className}>

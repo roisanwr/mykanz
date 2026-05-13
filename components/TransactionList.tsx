@@ -34,7 +34,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
         y:        0,
         duration: 0.45,
         stagger:  0.04,
-        ease:     'power3.out',
+        ease:     'cubic-bezier(0.16,1,0.3,1)',
         clearProps: 'all',
       }
     );

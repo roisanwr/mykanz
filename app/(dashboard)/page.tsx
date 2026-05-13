@@ -81,10 +81,10 @@ export default async function DashboardPage() {
   const netWorth = totalCash + totalInvestment;
 
   return (
-    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
       
       {/* 1. HERO SECTION: NET WORTH — brand-specific, no AI gradient */}
-      <div className="rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
+      <div className="rounded-none p-8 sm:p-12 text-white border-b-4 border-[oklch(0.65_0.2_35)] shadow-none relative overflow-hidden" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
         {/* Warm glow: brand orange, bukan indigo */}
         <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, oklch(0.72 0.18 55), transparent)' }}></div>
         <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, oklch(0.85 0.12 80), transparent)' }}></div>
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         
         {/* Kas Card */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all group">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group">
           <div className="flex items-center gap-3 mb-3">
             <div className="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl text-slate-600 dark:text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
               <Wallet className="w-5 h-5" />
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Investasi Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300 group">
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group">
           <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Nilai Portofolio</p>
           <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
           <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Pemasukan Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
           <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-2">Pemasukan Bulan Ini</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {formatRupiah(monthlyIncome)}
@@ -147,7 +147,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Pengeluaran Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-[shadow,transform] duration-300">
+        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
           <p className="text-[10px] font-bold text-rose-600 dark:text-rose-500 uppercase tracking-widest mb-2">Pengeluaran Bulan Ini</p>
           <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
             {formatRupiah(monthlyExpense)}
@@ -172,7 +172,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left Col: Recent Transactions */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-8 border-b-4 border-[oklch(0.65_0.2_35)] shadow-none">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-slate-400" /> Transaksi Terakhir
@@ -240,7 +240,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Right Col: Distribusi Kekayaan */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-8 border-b-4 border-[oklch(0.65_0.2_35)] shadow-none flex flex-col justify-between">
           <div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
               <span className="p-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-lg">

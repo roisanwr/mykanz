@@ -159,7 +159,7 @@ export default async function TransactionsPage(props: {
       {/* ── SUMMARY STATS (based on ALL matching rows, not just current page) ─── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Pemasukan */}
-        <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[oklch(0.96_0.02_150)] dark:bg-[oklch(0.2_0.02_150)] border-l-4 border-[oklch(0.6_0.15_150)] rounded-none p-6 flex items-center justify-between shadow-none">
           <div>
             <p className="text-emerald-700 dark:text-emerald-400 font-semibold text-sm mb-0.5">
               Total Pemasukan
@@ -173,13 +173,13 @@ export default async function TransactionsPage(props: {
               </p>
             )}
           </div>
-          <div className="p-3 bg-emerald-200 dark:bg-emerald-500/20 rounded-full shrink-0">
+          <div className="p-3 bg-emerald-200 dark:bg-emerald-500/20 rounded-none border-2 shrink-0">
             <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
           </div>
         </div>
 
         {/* Pengeluaran */}
-        <div className="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[oklch(0.96_0.02_20)] dark:bg-[oklch(0.2_0.02_20)] border-l-4 border-[oklch(0.6_0.15_20)] rounded-none p-6 flex items-center justify-between shadow-none">
           <div>
             <p className="text-rose-700 dark:text-rose-400 font-semibold text-sm mb-0.5">
               Total Pengeluaran
@@ -193,13 +193,13 @@ export default async function TransactionsPage(props: {
               </p>
             )}
           </div>
-          <div className="p-3 bg-rose-200 dark:bg-rose-500/20 rounded-full shrink-0">
+          <div className="p-3 bg-rose-200 dark:bg-rose-500/20 rounded-none border-2 shrink-0">
             <TrendingDown className="w-6 h-6 text-rose-600 dark:text-rose-400" />
           </div>
         </div>
 
         {/* Net / Transfer */}
-        <div className="bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 flex items-center justify-between">
+        <div className="bg-[oklch(0.98_0.01_250)] dark:bg-[oklch(0.18_0.02_250)] border-l-4 border-[oklch(0.6_0.05_250)] rounded-none p-6 flex items-center justify-between shadow-none">
           <div>
             <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm mb-0.5">
               Selisih (Net)
@@ -217,7 +217,7 @@ export default async function TransactionsPage(props: {
               </p>
             )}
           </div>
-          <div className="p-3 bg-slate-200 dark:bg-slate-600 rounded-full shrink-0">
+          <div className="p-3 bg-slate-200 dark:bg-slate-600 rounded-none border-2 shrink-0">
             <ArrowLeftRight className="w-6 h-6 text-slate-500 dark:text-slate-300" />
           </div>
         </div>

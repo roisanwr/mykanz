@@ -19,36 +19,54 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect('/login');
   const userId = session.user.id;
 
-  // 1. Fetch Total Wallet (Cash) Balance
-  const walletsDataRaw = await prisma.$queryRaw<any[]>`
-    SELECT COALESCE(SUM(wb.balance), 0) as total_balance
-    FROM wallets w
-    LEFT JOIN wallet_balances wb ON w.id = wb.wallet_id
-    WHERE w.user_id = ${userId}::uuid AND w.deleted_at IS NULL
-  `;
+  const now = new Date();
+  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+  // Run independent database queries concurrently to avoid waterfall
+  const [
+    walletsDataRaw,
+    portfolios,
+    monthlyTransactions,
+    recentTransactions
+  ] = await Promise.all([
+    // 1. Fetch Total Wallet (Cash) Balance
+    prisma.$queryRaw<any[]>`
+      SELECT COALESCE(SUM(wb.balance), 0) as total_balance
+      FROM wallets w
+      LEFT JOIN wallet_balances wb ON w.id = wb.wallet_id
+      WHERE w.user_id = ${userId}::uuid AND w.deleted_at IS NULL
+    `,
+    // 2. Fetch Total Investment Portfolio Balance
+    prisma.user_portfolios.findMany({
+      where: { user_id: userId }
+    }),
+    // 3. Fetch Monthly Cashflow (Fiat Transactions)
+    prisma.fiat_transactions.findMany({
+      where: {
+        user_id: userId,
+        transaction_date: { gte: firstDayOfMonth, lte: lastDayOfMonth },
+      }
+    }),
+    // 4. Fetch 5 Recent Transactions
+    prisma.fiat_transactions.findMany({
+      where: { user_id: userId },
+      orderBy: { transaction_date: 'desc' },
+      take: 5,
+      include: {
+        categories: true,
+        wallets_fiat_transactions_wallet_idTowallets: true
+      }
+    })
+  ]);
+
   const totalCash = Number(walletsDataRaw[0]?.total_balance || 0);
 
-  // 2. Fetch Total Investment Portfolio Balance
-  const portfolios = await prisma.user_portfolios.findMany({
-    where: { user_id: userId }
-  });
   const totalInvestment = portfolios.reduce((acc, port) => {
     const units = Number(port.total_units || 0);
     const avgPrice = Number(port.average_buy_price || 0);
     return acc + (units * avgPrice);
   }, 0);
-
-  // 3. Fetch Monthly Cashflow (Fiat Transactions)
-  const now = new Date();
-  const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-  const monthlyTransactions = await prisma.fiat_transactions.findMany({
-    where: {
-      user_id: userId,
-      transaction_date: { gte: firstDayOfMonth, lte: lastDayOfMonth },
-    }
-  });
 
   let monthlyIncome = 0;
   let monthlyExpense = 0;
@@ -61,17 +79,6 @@ export default async function DashboardPage() {
 
   // Calculate Net Worth
   const netWorth = totalCash + totalInvestment;
-
-  // 4. Fetch 5 Recent Transactions
-  const recentTransactions = await prisma.fiat_transactions.findMany({
-    where: { user_id: userId },
-    orderBy: { transaction_date: 'desc' },
-    take: 5,
-    include: {
-      categories: true,
-      wallets_fiat_transactions_wallet_idTowallets: true
-    }
-  });
 
   return (
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">

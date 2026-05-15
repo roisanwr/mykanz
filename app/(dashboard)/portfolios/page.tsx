@@ -117,15 +117,19 @@ export default async function PortfolioDashboardPage() {
     <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
 
       {/* ── HERO ─────────────────────────────────────────── */}
-      <div className="bg-gradient-to-br from-indigo-950 via-violet-950 to-slate-900 rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden group">
-        <div className="absolute -top-20 -right-20 w-60 h-60 bg-indigo-500 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
-        <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-violet-500 rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity duration-700" />
-        <div className="absolute top-4 right-6 opacity-[0.07]">
-          <Rocket className="w-52 h-52" />
+      <div
+        className="rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden group"
+        style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}
+      >
+        <div className="absolute inset-0 opacity-[0.05]" style={{ backgroundImage: "url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E')" }} />
+        <div className="absolute -top-32 -right-32 w-96 h-96 bg-orange-500 rounded-full blur-[120px] opacity-20 mix-blend-screen group-hover:opacity-30 transition-opacity duration-1000" />
+
+        <div className="absolute top-6 right-8 opacity-[0.04]">
+          <Rocket className="w-48 h-48" />
         </div>
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
-          <div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-end md:justify-between gap-8 lg:gap-12">
+          <div className="flex-1">
             <LiveNetWorth
               initialCash={0}
               initialInvestment={totalPortfolioValue}
@@ -133,27 +137,29 @@ export default async function PortfolioDashboardPage() {
               show="investment"
               label="Total Nilai Portofolio"
             />
-            <div className="flex flex-wrap gap-3">
-              <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2">
-                <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Aset Aktif</p>
-                <p className="text-white font-black text-xl">{activeAssets.length}</p>
+            <div className="flex flex-wrap gap-4 mt-6">
+              <div className="flex flex-col">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Aset Aktif</p>
+                <p className="text-2xl font-display font-black">{activeAssets.length}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2">
-                <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Total Aset</p>
-                <p className="text-white font-black text-xl">{assets.length}</p>
+              <div className="w-px bg-white/10" />
+              <div className="flex flex-col">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Total Aset</p>
+                <p className="text-2xl font-display font-black">{assets.length}</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm border border-white/10 rounded-xl px-4 py-2">
-                <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Jenis</p>
-                <p className="text-white font-black text-xl">{Object.keys(allocationMap).length}</p>
+              <div className="w-px bg-white/10" />
+              <div className="flex flex-col">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Jenis</p>
+                <p className="text-2xl font-display font-black">{Object.keys(allocationMap).length}</p>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-3 flex-wrap">
-            <Link href="/portfolios/assets" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 border border-white/10">
+          <div className="flex gap-3 flex-wrap md:flex-col lg:flex-row shrink-0">
+            <Link href="/portfolios/assets" className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 backdrop-blur-md px-6 py-3 rounded-xl text-sm font-bold transition-[transform,background-color] hover:-translate-y-0.5 border border-white/10">
               <Package className="w-4 h-4" /> Data Aset
             </Link>
-            <Link href="/portfolios/transactions" className="flex items-center gap-2 bg-violet-500 hover:bg-violet-600 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 shadow-lg shadow-violet-500/30">
+            <Link href="/portfolios/transactions" className="flex items-center justify-center gap-2 bg-white text-orange-950 hover:bg-orange-50 px-6 py-3 rounded-xl text-sm font-bold transition-[transform,background-color] hover:-translate-y-0.5 shadow-xl shadow-orange-900/20">
               <Plus className="w-4 h-4" /> Catat Investasi
             </Link>
           </div>

@@ -258,9 +258,9 @@ export async function POST(req: Request) {
 
       const parsed = await parseTransactionWithAI(textContent, imageBase64, existingData);
 
-      if (!parsed || !parsed.amount || parsed.amount === 0) {
+      if (!parsed) {
         await sendMessage(chatId,
-          `🤷 AI tidak dapat mengenali transaksi dari pesan ini.\n\n` +
+          `🤷 AI tidak dapat memproses pesan ini.\n\n` +
           `Coba format yang lebih jelas, contoh:\n` +
           `<code>beli nasi goreng 25000</code>\n` +
           `<code>terima transfer 500000</code>\n` +
@@ -269,10 +269,43 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      if (!parsed.amount || parsed.amount === 0) {
+        if (parsed.feedback) {
+          // Bersihkan sesi lama
+          await prisma.telegram_sessions.deleteMany({ where: { telegram_chat_id: chatId } });
+
+          // Simpan sesi agar percakapan bisa berlanjut (misal: user menjawab pertanyaan AI)
+          await prisma.telegram_sessions.create({
+            data: {
+              user_id: user.id,
+              telegram_chat_id: chatId,
+              state: 'AWAITING_AMOUNT',
+              data: JSON.stringify(parsed)
+            }
+          });
+
+          await sendMessage(chatId, `💬 <i>${parsed.feedback}</i>`);
+          return NextResponse.json({ ok: true });
+        } else {
+          await sendMessage(chatId,
+            `🤷 AI tidak dapat mengenali transaksi dari pesan ini.\n\n` +
+            `Coba format yang lebih jelas, contoh:\n` +
+            `<code>beli nasi goreng 25000</code>\n` +
+            `<code>terima transfer 500000</code>\n` +
+            `Atau kirim foto struk yang lebih terang.`
+          );
+          return NextResponse.json({ ok: true });
+        }
+      }
+
       // Jika koreksi, kita tetap di state yang sama atau lanjut jika data lengkap
       let newState = 'AWAITING_WALLET';
       if (isCorrection && existingSession && existingData) {
-        newState = existingSession.state;
+        if (existingSession.state === 'AWAITING_AMOUNT') {
+          newState = 'AWAITING_WALLET';
+        } else {
+          newState = existingSession.state;
+        }
         // Merge data penting yang mungkin hilang saat AI parsing ulang (seperti ID wallet/kategori yang sudah dipilih)
         if (existingData.wallet_id) parsed.wallet_id = existingData.wallet_id;
         if (existingData.wallet_name) parsed.wallet_name = existingData.wallet_name;

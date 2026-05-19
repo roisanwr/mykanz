@@ -204,14 +204,14 @@ export async function POST(req: Request) {
 
       const typeEmoji = parsedData.type === 'PEMASUKAN' ? '📈' : '📉';
       const summaryText =
-        `📝 <b>Konfirmasi Transaksi</b>\n\n` +
-        `${typeEmoji} Tipe: <b>${parsedData.type}</b>\n` +
-        `💰 Jumlah: <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
-        `🗂 Kategori: <b>${newCategory.name}</b>\n` +
-        `💳 Dompet: <b>${parsedData.wallet_name}</b>\n` +
-        `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
-        `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
-        `Apakah data ini sudah benar?`;
+        `✨ <b>Kategori baru berhasil dibuat!</b>\n\n` +
+        `Oke, jadi ini ringkasan transaksinya:\n` +
+        `• <b>${parsedData.type}</b> nominal <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
+        `• Kategori: <b>${newCategory.name}</b>\n` +
+        `• Dompet: <b>${parsedData.wallet_name}</b>\n` +
+        `• Tanggal: ${parsedData.date || 'Hari ini'}\n` +
+        `• Keterangan: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
+        `Sudah sesuai semua?`;
 
       await sendMessage(chatId, summaryText, {
         reply_markup: {
@@ -333,16 +333,16 @@ export async function POST(req: Request) {
         };
       }
 
+      const feedbackText = parsed.feedback ? `💬 <i>${parsed.feedback}</i>\n\n` : '';
       const messageText =
-        `${typeEmoji} <b>Terdeteksi ${parsed.type}</b>\n` +
-        `💰 Jumlah: <b>Rp ${parsed.amount.toLocaleString('id-ID')}</b>\n` +
-        `🗂 Kategori: ${parsed.category_guess}\n` +
-        `📝 Detail: ${parsed.items_summary || parsed.store_name || '-'}\n` +
-        `📅 Tanggal: ${parsed.date || 'Hari ini'}\n\n` +
-        (newState === 'AWAITING_WALLET' ? `Pilih dompet yang digunakan:` :
-         newState === 'AWAITING_CATEGORY' ? `Pilih kategori yang sesuai:` :
-         `Apakah data ini sudah benar?`) +
-        `\n\n<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`;
+        feedbackText +
+        `Aku mencatat <b>${parsed.type.toLowerCase()}</b> sebesar <b>Rp ${parsed.amount.toLocaleString('id-ID')}</b>.\n` +
+        `Kategorinya <b>${parsed.category_name || parsed.category_guess}</b>, dicatat di dompet <b>${parsed.wallet_name || '-'}</b>.\n` +
+        `Keterangannya: <i>${parsed.items_summary || parsed.store_name || '-'}</i>\n\n` +
+        (newState === 'AWAITING_WALLET' ? `Sekarang, pilih <b>dompet</b> yang mau dipakai ya:` :
+         newState === 'AWAITING_CATEGORY' ? `Lalu, pilih <b>kategori</b> yang pas:` :
+         `Sudah benar semua datanya?`) +
+        `\n\n<i>Ketik aja kalau ada yang mau diganti.</i>`;
 
       await sendMessage(chatId, messageText, { reply_markup: keyboard });
     }
@@ -435,15 +435,15 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
 
       const typeEmoji = parsedData.type === 'PEMASUKAN' ? '📈' : '📉';
       const summaryText =
-        `📝 <b>Konfirmasi Transaksi</b>\n\n` +
-        `${typeEmoji} Tipe: <b>${parsedData.type}</b>\n` +
-        `💰 Jumlah: <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
-        `🗂 Kategori: <b>${category.name}</b>\n` +
-        `💳 Dompet: <b>${parsedData.wallet_name}</b>\n` +
-        `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
-        `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
-        `Apakah data ini sudah benar?\n\n` +
-        `<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`;
+        `🙌 <b>Sip! Kategori sudah dipilih.</b>\n\n` +
+        `Ringkasan akhirnya begini:\n` +
+        `• <b>${parsedData.type}</b> nominal <b>Rp ${parsedData.amount.toLocaleString('id-ID')}</b>\n` +
+        `• Kategori: <b>${category.name}</b>\n` +
+        `• Dompet: <b>${parsedData.wallet_name}</b>\n` +
+        `• Tanggal: ${parsedData.date || 'Hari ini'}\n` +
+        `• Keterangan: <i>${parsedData.items_summary || parsedData.store_name || '-'}</i>\n\n` +
+        `Sudah benar semua datanya?\n\n` +
+        `<i>Ketik aja kalau ada yang mau diganti.</i>`;
 
       await editMessageText(chatId, messageId, summaryText, {
         reply_markup: {

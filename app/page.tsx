@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import DashboardCharts from '@/components/DashboardCharts';
 import TransactionActivityChart from '@/components/TransactionActivityChart';
+import TextReveal from '@/components/shared/TextReveal';
 
 const formatRupiah = (angka: number) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
@@ -112,9 +113,11 @@ export default async function DashboardPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               Total Kekayaan Bersih
             </p>
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-none">
-              {formatRupiah(netWorth)}
-            </h1>
+            <TextReveal
+              elementType="h1"
+              text={formatRupiah(netWorth)}
+              className="font-display text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-white leading-none"
+            />
             <p className="text-[oklch(0.78_0.08_55)] text-sm mt-3 font-medium">
               Halo, {session.user.name}. Hari ini adalah hari yang tepat untuk mencatat.
             </p>

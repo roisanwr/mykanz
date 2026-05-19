@@ -32,7 +32,7 @@ export default async function EventsPage() {
   let upcomingCount = 0;
   let pastCount = 0;
 
-  events.forEach(e => {
+  events.forEach((e) => {
     if (new Date(e.end_date) < today) pastCount++;
     else if (new Date(e.start_date) > today) upcomingCount++;
     else activeCount++;
@@ -92,7 +92,7 @@ export default async function EventsPage() {
             let total_expense = 0;
             let total_income = 0;
       
-            event.fiat_transactions.forEach(tx => {
+            event.fiat_transactions.forEach((tx) => {
               if (tx.transaction_type === 'PENGELUARAN') {
                 total_expense += Number(tx.amount);
               } else if (tx.transaction_type === 'PEMASUKAN') {

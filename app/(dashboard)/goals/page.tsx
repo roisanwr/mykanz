@@ -51,10 +51,10 @@ export default async function GoalsPage() {
 
   // Map assets by ID for quick lookup
   const assetsById: Record<string, any> = {};
-  assets.forEach(a => { assetsById[a.id] = a; });
+  assets.forEach((a) => { assetsById[a.id] = a; });
 
   // Process goals dynamically, especially for Asset goals
-  const processedGoals = goalsRaw.map(goal => {
+  const processedGoals = goalsRaw.map((goal) => {
     // Safely convert all Decimal fields to plain JS numbers for serialization    
     const goalAsset = (goal as any).asset_id ? assetsById[(goal as any).asset_id] : null;
     const targetAssetUnits = (goal as any).target_asset_units ? Number((goal as any).target_asset_units) : null;
@@ -78,7 +78,7 @@ export default async function GoalsPage() {
     };
 
     if (safeGoal.asset_id) {
-       const port = portfolios.find(p => p.asset_id === safeGoal.asset_id);
+       const port = portfolios.find((p) => p.asset_id === safeGoal.asset_id);
        const currentUnits = Number(port?.total_units || 0);
        const targetUnits = Number(safeGoal.target_asset_units || 1);
        const progress = calculateProgress(currentUnits, targetUnits);
@@ -127,7 +127,7 @@ export default async function GoalsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 lg:gap-6 mt-6">
-          {processedGoals.map(goal => {
+          {processedGoals.map((goal) => {
             const isCompleted = goal.progress >= 100;
 
             return (

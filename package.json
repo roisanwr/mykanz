@@ -24,6 +24,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "recharts": "^3.8.0",
+    "split-type": "^0.3.4",
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.4.3"

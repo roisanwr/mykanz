@@ -5,9 +5,13 @@ export default function PortfoliosLoading() {
   return (
     <div className="space-y-6" aria-label="Memuat portofolio...">
       {/* Summary hero */}
-      <div className="rounded-2xl p-6 animate-pulse" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
-        <SkeletonLine className="h-3 w-32 mb-3 opacity-30" />
-        <SkeletonLine className="h-12 w-56 opacity-50" />
+      <div className="rounded-3xl p-8 sm:p-10 text-white shadow-2xl relative overflow-hidden group animate-pulse" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
+        <SkeletonLine className="h-3 w-32 mb-3 bg-white/20" />
+        <SkeletonLine className="h-16 w-64 bg-white/30" />
+        <div className="flex gap-4 mt-6">
+           <SkeletonLine className="h-10 w-24 bg-white/20" />
+           <SkeletonLine className="h-10 w-24 bg-white/20" />
+        </div>
       </div>
       {/* Asset table */}
       <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 space-y-3 animate-pulse">

@@ -3,6 +3,12 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+
+const PasswordChangeSchema = z.object({
+  currentPassword: z.string().min(1, 'Password lama wajib diisi.'),
+  newPassword: z.string().min(8, 'Password baru minimal 8 karakter.'),
+});
 
 export async function PUT(req: Request) {
   try {
@@ -12,18 +18,16 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const { currentPassword, newPassword } = body;
+    const result = PasswordChangeSchema.safeParse(body);
 
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: 'Semua field wajib diisi.' }, { status: 400 });
-    }
-
-    if (newPassword.length < 8) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Password baru minimal 8 karakter.' },
+        { error: result.error.issues[0].message },
         { status: 400 }
       );
     }
+
+    const { currentPassword, newPassword } = result.data;
 
     const user = await prisma.users.findUnique({
       where: { id: session.user.id },

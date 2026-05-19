@@ -226,7 +226,13 @@ export async function POST(req: Request) {
 
     // H. Handle Foto atau Teks Bebas → Pipeline AI
     if (message.photo || (text && !text.startsWith('/'))) {
-      await sendMessage(chatId, '⏳ Memproses dengan AI, sebentar...');
+      const existingSession = await prisma.telegram_sessions.findFirst({
+        where: { telegram_chat_id: chatId },
+        orderBy: { created_at: 'desc' }
+      });
+
+      const isCorrection = existingSession && text && !message.photo;
+      await sendMessage(chatId, isCorrection ? '🔄 Mengupdate data...' : '⏳ Memproses dengan AI, sebentar...');
 
       let imageBase64: string | null = null;
       const textContent: string | null = text || null;
@@ -241,7 +247,16 @@ export async function POST(req: Request) {
         }
       }
 
-      const parsed = await parseTransactionWithAI(textContent, imageBase64);
+      let existingData = null;
+      if (isCorrection) {
+        try {
+          existingData = JSON.parse(existingSession.data || '{}');
+        } catch (e) {
+          console.error("Failed to parse existing session data", e);
+        }
+      }
+
+      const parsed = await parseTransactionWithAI(textContent, imageBase64, existingData);
 
       if (!parsed || !parsed.amount || parsed.amount === 0) {
         await sendMessage(chatId,
@@ -254,6 +269,17 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      // Jika koreksi, kita tetap di state yang sama atau lanjut jika data lengkap
+      let newState = 'AWAITING_WALLET';
+      if (isCorrection && existingSession && existingData) {
+        newState = existingSession.state;
+        // Merge data penting yang mungkin hilang saat AI parsing ulang (seperti ID wallet/kategori yang sudah dipilih)
+        if (existingData.wallet_id) parsed.wallet_id = existingData.wallet_id;
+        if (existingData.wallet_name) parsed.wallet_name = existingData.wallet_name;
+        if (existingData.category_id) parsed.category_id = existingData.category_id;
+        if (existingData.category_name) parsed.category_name = existingData.category_name;
+      }
+
       // Bersihkan sesi lama (jika ada) sebelum buat yang baru
       await prisma.telegram_sessions.deleteMany({ where: { telegram_chat_id: chatId } });
 
@@ -262,7 +288,7 @@ export async function POST(req: Request) {
         data: {
           user_id: user.id,
           telegram_chat_id: chatId,
-          state: 'AWAITING_WALLET',
+          state: newState as any,
           data: JSON.stringify(parsed)
         }
       });
@@ -279,22 +305,46 @@ export async function POST(req: Request) {
       }
 
       const typeEmoji = parsed.type === 'PEMASUKAN' ? '📈' : '📉';
-      const keyboard = {
+      let keyboard = {
         inline_keyboard: [
           ...wallets.map(w => [{ text: `💳 ${w.name} (${w.currency})`, callback_data: `wallet:${w.id}` }]),
           [{ text: '❌ Batal', callback_data: 'action:cancel' }]
         ]
       };
 
-      await sendMessage(chatId,
+      if (newState === 'AWAITING_CATEGORY') {
+        const categories = await prisma.categories.findMany({
+          where: { user_id: user.id, type: parsed.type as fiat_tx_type, deleted_at: null },
+          orderBy: { name: 'asc' }
+        });
+        keyboard = {
+          inline_keyboard: [
+            ...categories.map(c => [{ text: `🗂 ${c.name}`, callback_data: `category:${c.id}` }]),
+            [{ text: '➕ Tambah Kategori Baru', callback_data: 'action:new_category' }],
+            [{ text: '❌ Batal', callback_data: 'action:cancel' }]
+          ]
+        };
+      } else if (newState === 'AWAITING_CONFIRMATION') {
+        keyboard = {
+          inline_keyboard: [
+            [{ text: '✅ Ya, Simpan', callback_data: 'action:save' }],
+            [{ text: '❌ Batalkan', callback_data: 'action:cancel' }]
+          ]
+        };
+      }
+
+      const messageText =
         `${typeEmoji} <b>Terdeteksi ${parsed.type}</b>\n` +
         `💰 Jumlah: <b>Rp ${parsed.amount.toLocaleString('id-ID')}</b>\n` +
         `🗂 Kategori: ${parsed.category_guess}\n` +
         `📝 Detail: ${parsed.items_summary || parsed.store_name || '-'}\n` +
         `📅 Tanggal: ${parsed.date || 'Hari ini'}\n\n` +
-        `Pilih dompet yang digunakan:`,
-        { reply_markup: keyboard }
-      );
+        (newState === 'AWAITING_WALLET' ? `Pilih dompet yang digunakan:` :
+         newState === 'AWAITING_CATEGORY' ? `Pilih kategori yang sesuai:` :
+         `Apakah data ini sudah benar?`) +
+        `\n\n<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`;
+
+      await sendMessage(chatId, messageText, { reply_markup: keyboard });
     }
 
     return NextResponse.json({ ok: true });
@@ -355,7 +405,8 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
     await editMessageText(chatId, messageId,
       `💳 Dompet terpilih: <b>${wallet.name}</b>\n\n` +
       `Tebakan AI Kategori: ${parsedData.category_guess}\n\n` +
-      `Silakan pilih kategori dari daftar di bawah ini atau tambah baru:`,
+      `Silakan pilih kategori dari daftar di bawah ini atau tambah baru:\n\n` +
+      `<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`,
       { reply_markup: keyboard }
     );
 
@@ -391,7 +442,8 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
         `💳 Dompet: <b>${parsedData.wallet_name}</b>\n` +
         `📅 Tanggal: ${parsedData.date || 'Hari ini'}\n` +
         `📝 Detail: ${parsedData.items_summary || parsedData.store_name || '-'}\n\n` +
-        `Apakah data ini sudah benar?`;
+        `Apakah data ini sudah benar?\n\n` +
+        `<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`;
 
       await editMessageText(chatId, messageId, summaryText, {
         reply_markup: {

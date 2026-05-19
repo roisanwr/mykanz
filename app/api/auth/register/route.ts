@@ -2,19 +2,28 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+
+const RegisterSchema = z.object({
+  name: z.string().min(1, 'Nama wajib diisi.'),
+  email: z.string().email('Email tidak valid.'),
+  password: z.string().min(8, 'Password minimal 8 karakter.'),
+});
 
 // POST: Register a new user
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, email, password } = body;
 
-    if (!name || !email || !password) {
+    const result = RegisterSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Semua kolom wajib diisi!' },
+        { error: result.error.issues[0].message },
         { status: 400 }
       );
     }
+
+    const { name, email, password } = result.data;
 
     // Check if email already exists
     const existingUser = await prisma.users.findUnique({

@@ -18,12 +18,17 @@ export interface ParsedTransaction {
   category_guess: string;
   items_summary: string | null;
   type: 'PENGELUARAN' | 'PEMASUKAN';
+  // UI/Internal State (optional for AI output)
+  wallet_id?: string;
+  wallet_name?: string;
+  category_id?: string;
+  category_name?: string;
 }
 
 // System prompt that forces JSON output matching the interface
 const SYSTEM_PROMPT = `
-Kamu adalah asisten pengurai struk belanja dan asisten keuangan pribadi Indonesia.
-Tugasmu adalah menganalisis gambar struk ATAU pesan teks, lalu mengekstrak informasi transaksi keuangan.
+Kamu adalah asisten pengurai struk belanja dan asisten keuangan pribadi Indonesia yang santai tapi profesional.
+Tugasmu adalah menganalisis gambar struk, pesan teks baru, atau mengoreksi data transaksi yang sudah ada berdasarkan instruksi user.
 
 Keluarkan MURNI JSON (tanpa markdown blok seperti \`\`\`json).
 Format JSON yang WAJIB kamu ikuti:
@@ -38,6 +43,7 @@ Format JSON yang WAJIB kamu ikuti:
 
 Catatan Penting:
 - Jika menganalisis teks (misal: "beli kopi 50rb" -> amount: 50000, type: PENGELUARAN).
+- Jika user memberikan instruksi koreksi (misal: "salah, harusnya 60rb"), update field "amount" berdasarkan info tersebut dan pertahankan field lain yang masih valid.
 - Jika ada tulisan "gaji", "bonus", "dikasih", kemungkinan besar "PEMASUKAN".
 - Mata uang selalu dalam Rupiah (IDR).
 - JANGAN mengarang data. Jika tidak yakin, set null.
@@ -45,7 +51,8 @@ Catatan Penting:
 
 export async function parseTransactionWithAI(
   textContent: string | null,
-  imageBase64: string | null = null
+  imageBase64: string | null = null,
+  existingData: Partial<ParsedTransaction> | null = null
 ): Promise<ParsedTransaction | null> {
   try {
     const messages: any[] = [
@@ -54,7 +61,12 @@ export async function parseTransactionWithAI(
 
     const userContent: any[] = [];
     
-    if (textContent) {
+    if (existingData) {
+      userContent.push({
+        type: "text",
+        text: `DATA SAAT INI (JSON): ${JSON.stringify(existingData)}\n\nUSER INGIN MENGUBAH/MENGOREKSI DATA TERSEBUT DENGAN PESAN BERIKUT:\n${textContent}`
+      });
+    } else if (textContent) {
       userContent.push({ type: "text", text: textContent });
     } else if (!imageBase64) {
       userContent.push({ type: "text", text: "Tolong ekstrak struk ini." });

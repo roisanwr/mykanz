@@ -1,108 +1,558 @@
-/* app/globals.css */
+/* ═══════════════════════════════════════════════════════════════════
+   app/globals.css
+   MyKanz Design System — Anti-AI-Slop Edition v2.0
+   
+   ARSITEKTUR TOKEN:
+   1. @theme       → Tailwind custom tokens (colors, fonts, animations)
+   2. :root        → CSS custom properties (semantic, mode-agnostic)
+   3. .light :root → Override khusus light mode  
+   4. .dark  :root → Override khusus dark mode
+   5. @layer base  → Base HTML styles
+   6. Utilities    → Component-level classes
+   7. Keyframes    → Semua animasi
+═══════════════════════════════════════════════════════════════════ */
+
 @import "tailwindcss";
 
-/* Aktifkan class-based Dark Mode di v4 */
+/* Aktifkan class-based Dark Mode di Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
 
 
-/* ══════════════════════════════════════════════════════
-   TEMA KUSTOM MYKANZ — Anti-AI-Slop Edition
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   1. TAILWIND @THEME — Custom Tokens
+   ═══════════════════════════════════════════════════════════════════ */
 @theme {
-  /* Brand Colors — Orange/Amber, unexpected, intentional */
-  --color-primary-50:  #fff7ed;
-  --color-primary-100: #ffedd5;
-  --color-primary-200: #fed7aa;
-  --color-primary-300: #fdba74;
-  --color-primary-400: #fb923c;
-  --color-primary-500: #f97316;
-  --color-primary-600: #ea580c;
-  --color-primary-700: #c2410c;
-  --color-primary-800: #9a3412;
-  --color-primary-900: #7c2d12;
 
-  /* Wealth / Income Green */
-  --color-wealth-50:  #f0fdf4;
-  --color-wealth-100: #dcfce7;
-  --color-wealth-200: #bbf7d0;
-  --color-wealth-300: #86efac;
-  --color-wealth-400: #4ade80;
-  --color-wealth-500: #22c55e;
-  --color-wealth-600: #16a34a;
-  --color-wealth-700: #15803d;
-  --color-wealth-800: #166534;
-  --color-wealth-900: #14532d;
+  /* ── Brand: Amber/Orange — confident, warm, anti-generic ── */
+  --color-brand-50:   oklch(0.98 0.018 70);
+  --color-brand-100:  oklch(0.96 0.040 65);
+  --color-brand-200:  oklch(0.92 0.075 60);
+  --color-brand-300:  oklch(0.86 0.120 55);
+  --color-brand-400:  oklch(0.78 0.160 50);
+  --color-brand-500:  oklch(0.70 0.185 47);   /* Brand utama: bisa dipakai di light & dark */
+  --color-brand-600:  oklch(0.62 0.185 40);
+  --color-brand-700:  oklch(0.52 0.170 35);
+  --color-brand-800:  oklch(0.40 0.140 30);
+  --color-brand-900:  oklch(0.28 0.090 28);
 
-  /* ── TYPOGRAPHY — Kill Inter, embrace personality ── */
-  /* DM Sans untuk body: readable, modern, NOT overused */
-  /* Syne untuk display heading: distinctive, geometric */
+  /* ── Wealth/Income: Emerald — growth, positive, trustworthy ── */
+  --color-wealth-50:  oklch(0.98 0.015 155);
+  --color-wealth-100: oklch(0.96 0.040 150);
+  --color-wealth-200: oklch(0.92 0.080 148);
+  --color-wealth-300: oklch(0.85 0.130 148);
+  --color-wealth-400: oklch(0.75 0.170 150);
+  --color-wealth-500: oklch(0.64 0.185 152);  /* Income/wealth utama */
+  --color-wealth-600: oklch(0.54 0.165 150);
+  --color-wealth-700: oklch(0.42 0.130 148);
+  --color-wealth-800: oklch(0.32 0.095 145);
+  --color-wealth-900: oklch(0.22 0.060 142);
+
+  /* ── Expense/Loss: Rose — clear signal, bukan panic ── */
+  --color-expense-50:  oklch(0.98 0.012 20);
+  --color-expense-100: oklch(0.96 0.035 22);
+  --color-expense-200: oklch(0.92 0.070 20);
+  --color-expense-300: oklch(0.86 0.120 20);
+  --color-expense-400: oklch(0.76 0.170 22);
+  --color-expense-500: oklch(0.62 0.200 23);  /* Expense utama */
+  --color-expense-600: oklch(0.52 0.185 22);
+  --color-expense-700: oklch(0.42 0.155 20);
+  --color-expense-800: oklch(0.30 0.110 18);
+  --color-expense-900: oklch(0.20 0.065 16);
+
+  /* ── Investment: Violet — premium, sophisticated ── */
+  --color-invest-50:  oklch(0.98 0.010 280);
+  --color-invest-100: oklch(0.95 0.030 278);
+  --color-invest-200: oklch(0.90 0.065 275);
+  --color-invest-300: oklch(0.82 0.110 270);
+  --color-invest-400: oklch(0.70 0.155 265);
+  --color-invest-500: oklch(0.58 0.185 265);  /* Investasi utama */
+  --color-invest-600: oklch(0.48 0.170 262);
+  --color-invest-700: oklch(0.38 0.140 258);
+  --color-invest-800: oklch(0.28 0.100 255);
+  --color-invest-900: oklch(0.18 0.060 252);
+
+  /* ── Typography Fonts ── */
   --font-sans:    var(--dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--syne), ui-sans-serif, system-ui, sans-serif;
+  --font-mono:    ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
 
-  /* ── ANIMATIONS ── */
-  --animate-float:      float 3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  /* ── Registered Animations ── */
+  --animate-float:      float 3.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-shimmer:    shimmer 2s linear infinite;
 }
 
 
-/* ══════════════════════════════════════════════════════
-   CUSTOM EASING TOKENS — No more "ease-in-out" defaults
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   2. CSS CUSTOM PROPERTIES — Mode-Agnostic Base
+   Semua semantic tokens ada di sini. Nilai default = light mode.
+   ═══════════════════════════════════════════════════════════════════ */
 :root {
-  /* Layout & Spacing tokens */
-  --jarak-atas-header:  12px;
-  --jarak-kiri-kanan:   16px;
-  --jarak-bawah:        12px;
-  --lebar-sidebar:      260px;
-  --jarak-antar-elemen: 20px;
-  --lengkung-kotak:     16px;
 
-  /* Custom Easing Curves — Professional motion */
-  --ease-out-expo:    cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-expo:     cubic-bezier(0.7, 0, 0.84, 0);
-  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
-  --ease-spring:      cubic-bezier(0.34, 1.25, 0.64, 1);
+  /* ── Radius Scale — SATU sumber kebenaran, tidak ada lagi rounded-none vs rounded-2xl ── */
+  --radius-xs:   4px;    /* micro: badges, chips, tags kecil */
+  --radius-sm:   8px;    /* kecil: input, button-sm, pills */
+  --radius-md:   12px;   /* standar: buttons, inputs, cards kecil */
+  --radius-lg:   16px;   /* cards utama, metric cards */
+  --radius-xl:   20px;   /* panels besar, sidebar, modals */
+  --radius-2xl:  24px;   /* header, large containers */
+  --radius-full: 9999px; /* pills, avatars, badges bulat */
 
-  /* Tinted Neutrals — OKLCH, NOT pure gray */
-  /* Background: warm-tinted surface, bukan cold #f4f6f8 */
-  --surface-bg:     oklch(0.965 0.006 60);
-  --surface-bg-dark: oklch(0.145 0.018 250);
+  /* ── Spacing Scale (4pt grid) ── */
+  --space-1:  0.25rem;   /* 4px */
+  --space-2:  0.5rem;    /* 8px */
+  --space-3:  0.75rem;   /* 12px */
+  --space-4:  1rem;      /* 16px */
+  --space-5:  1.25rem;   /* 20px */
+  --space-6:  1.5rem;    /* 24px */
+  --space-8:  2rem;      /* 32px */
+  --space-10: 2.5rem;    /* 40px */
+  --space-12: 3rem;      /* 48px */
+  --space-16: 4rem;      /* 64px */
+  --space-20: 5rem;      /* 80px */
+
+  /* ── Fluid Typography Scale — clamp(min, preferred, max) ── */
+  /* Skala ini menggantikan semua text-xs, text-sm, text-lg hardcode */
+  --text-2xs:  clamp(0.625rem,  0.60rem  + 0.12vw, 0.6875rem);  /* 10-11px: micro labels */
+  --text-xs:   clamp(0.6875rem, 0.66rem  + 0.14vw, 0.75rem);    /* 11-12px: captions */
+  --text-sm:   clamp(0.8125rem, 0.78rem  + 0.17vw, 0.875rem);   /* 13-14px: body small */
+  --text-base: clamp(0.9375rem, 0.90rem  + 0.19vw, 1rem);        /* 15-16px: body */
+  --text-lg:   clamp(1.0625rem, 1.00rem  + 0.31vw, 1.125rem);   /* 17-18px: body large */
+  --text-xl:   clamp(1.1875rem, 1.10rem  + 0.44vw, 1.25rem);    /* 19-20px: subtitle */
+  --text-2xl:  clamp(1.375rem,  1.20rem  + 0.88vw, 1.5rem);     /* 22-24px: section heads */
+  --text-3xl:  clamp(1.75rem,   1.50rem  + 1.25vw, 2rem);       /* 28-32px: page titles */
+  --text-4xl:  clamp(2rem,      1.70rem  + 1.50vw, 2.5rem);     /* 32-40px: hero sub */
+  --text-hero: clamp(2.5rem,    2.00rem  + 2.50vw, 4rem);       /* 40-64px: net worth hero */
+
+  /* ── Motion Easing Tokens ── */
+  --ease-spring:      cubic-bezier(0.34, 1.25, 0.64, 1);   /* overshoots sedikit — playful */
+  --ease-out-expo:    cubic-bezier(0.16, 1, 0.3, 1);        /* "yui" — smooth decelerate */
+  --ease-in-expo:     cubic-bezier(0.7, 0, 0.84, 0);        /* accelerate masuk */
+  --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);       /* dramatic crossfade */
+  --ease-smooth:      cubic-bezier(0.25, 0.1, 0.25, 1);     /* default CSS ease, refined */
+
+  /* ── Motion Duration Tokens ── */
+  --duration-instant:  80ms;    /* feedback langsung: toggle, checkbox */
+  --duration-fast:     150ms;   /* hover states, small transitions */
+  --duration-normal:   250ms;   /* standard transitions */
+  --duration-slow:     400ms;   /* modal open, dropdown */
+  --duration-dramatic: 700ms;   /* page transitions, hero animations */
+
+  /* ── Layout ── */
+  --sidebar-width:        240px;
+  --sidebar-width-icon:   64px;
+  --header-height:        64px;
+  --content-max-width:    1440px;
+
+  /* ══════════════════════════════════════════
+     LIGHT MODE SURFACE COLORS (default)
+     Warm-tinted — bukan cold #f4f6f8
+  ══════════════════════════════════════════ */
+
+  /* Backgrounds */
+  --color-bg-base:      oklch(0.975 0.005 70);   /* Latar utama: warm off-white */
+  --color-bg-surface:   oklch(1 0 0);             /* Card surface: pure white */
+  --color-bg-elevated:  oklch(0.995 0.003 70);   /* Elevated card: slightly warm */
+  --color-bg-sunken:    oklch(0.960 0.007 65);   /* Input bg, code block */
+  --color-bg-overlay:   oklch(0 0 0 / 0.45);     /* Modal backdrop */
+
+  /* Borders */
+  --color-border:       oklch(0.90 0.008 70);    /* Default border */
+  --color-border-strong: oklch(0.82 0.010 65);   /* Focus, active borders */
+  --color-border-subtle: oklch(0.94 0.005 70);   /* Very subtle dividers */
+
+  /* Text */
+  --color-text-primary:   oklch(0.18 0.010 55);  /* Headings, key data */
+  --color-text-secondary: oklch(0.42 0.010 60);  /* Body text, descriptions */
+  --color-text-tertiary:  oklch(0.60 0.008 60);  /* Captions, meta info */
+  --color-text-disabled:  oklch(0.75 0.005 60);  /* Disabled state */
+  --color-text-on-brand:  oklch(1 0 0);          /* Text di atas brand color */
+
+  /* Interactive */
+  --color-focus-ring:    oklch(0.70 0.185 47 / 0.5); /* Focus ring: brand with alpha */
+
+  /* Semantic Surfaces (light) */
+  --color-brand-surface: oklch(0.98 0.025 65);   /* Brand-tinted bg: alert, highlight */
+  --color-wealth-surface: oklch(0.97 0.030 152); /* Income surface */
+  --color-expense-surface: oklch(0.97 0.025 22); /* Expense surface */
+  --color-invest-surface: oklch(0.97 0.020 275); /* Investment surface */
+
+  /* ── Shadows — Warm-tinted, bukan pure black ── */
+  --shadow-xs:    0 1px 2px oklch(0.35 0.02 55 / 0.06);
+  --shadow-sm:    0 1px 3px oklch(0.35 0.02 55 / 0.08),
+                  0 1px 2px oklch(0.35 0.02 55 / 0.05);
+  --shadow-md:    0 4px 6px  oklch(0.35 0.02 55 / 0.07),
+                  0 2px 4px  oklch(0.35 0.02 55 / 0.05);
+  --shadow-lg:    0 10px 15px oklch(0.35 0.02 55 / 0.08),
+                  0 4px  6px  oklch(0.35 0.02 55 / 0.05);
+  --shadow-xl:    0 20px 25px oklch(0.35 0.02 55 / 0.10),
+                  0 8px  10px oklch(0.35 0.02 55 / 0.06);
+  --shadow-brand: 0 4px 20px oklch(0.70 0.185 47 / 0.28);  /* Glow brand orange */
+  --shadow-wealth: 0 4px 16px oklch(0.64 0.185 152 / 0.25); /* Glow emerald */
+  --shadow-card-hover: 0 8px 24px oklch(0.35 0.02 55 / 0.12),
+                       0 3px 8px  oklch(0.35 0.02 55 / 0.08);
 }
 
 
-/* ══════════════════════════════════════════════════════
-   BASE STYLES
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   3. DARK MODE OVERRIDES
+   Override HANYA surface/text/border — bukan brand colors
+   Brand colors (brand-500, wealth-500, dll) SAMA di kedua mode
+   karena OKLCH perceptually uniform = contrast otomatis aman
+   ═══════════════════════════════════════════════════════════════════ */
+.dark {
+  /* Backgrounds — Rich dark, tidak flat hitam */
+  --color-bg-base:      oklch(0.145 0.018 250); /* Latar utama: cool dark navy */
+  --color-bg-surface:   oklch(0.195 0.020 255); /* Card surface: sedikit lebih terang */
+  --color-bg-elevated:  oklch(0.230 0.022 255); /* Elevated: dropdown, tooltip */
+  --color-bg-sunken:    oklch(0.115 0.015 250); /* Input bg, sunken panel */
+  --color-bg-overlay:   oklch(0 0 0 / 0.65);    /* Modal backdrop (lebih gelap) */
+
+  /* Borders */
+  --color-border:        oklch(0.28 0.020 255);  /* Default border */
+  --color-border-strong: oklch(0.38 0.025 255);  /* Focus, active */
+  --color-border-subtle: oklch(0.22 0.015 255);  /* Dividers */
+
+  /* Text — High contrast di dark background */
+  --color-text-primary:   oklch(0.95 0.005 80);  /* Hampir putih, warm tinted */
+  --color-text-secondary: oklch(0.72 0.010 80);  /* Body text */
+  --color-text-tertiary:  oklch(0.52 0.010 80);  /* Captions */
+  --color-text-disabled:  oklch(0.38 0.008 80);  /* Disabled */
+  --color-text-on-brand:  oklch(1 0 0);          /* Sama */
+
+  /* Interactive */
+  --color-focus-ring: oklch(0.78 0.185 47 / 0.6); /* Sedikit lebih bright di dark */
+
+  /* Semantic Surfaces (dark) — transparan overlay di dark surface */
+  --color-brand-surface:   oklch(0.70 0.185 47 / 0.12);  /* Brand tint di dark */
+  --color-wealth-surface:  oklch(0.64 0.185 152 / 0.12); /* Wealth tint */
+  --color-expense-surface: oklch(0.62 0.200 23 / 0.12);  /* Expense tint */
+  --color-invest-surface:  oklch(0.58 0.185 265 / 0.12); /* Invest tint */
+
+  /* Shadows — lebih kuat di dark mode untuk depth */
+  --shadow-xs:    0 1px 2px oklch(0 0 0 / 0.20);
+  --shadow-sm:    0 1px 3px oklch(0 0 0 / 0.28),
+                  0 1px 2px oklch(0 0 0 / 0.18);
+  --shadow-md:    0 4px 6px  oklch(0 0 0 / 0.30),
+                  0 2px 4px  oklch(0 0 0 / 0.20);
+  --shadow-lg:    0 10px 15px oklch(0 0 0 / 0.35),
+                  0 4px 6px   oklch(0 0 0 / 0.22);
+  --shadow-xl:    0 20px 25px oklch(0 0 0 / 0.40),
+                  0 8px 10px  oklch(0 0 0 / 0.28);
+  --shadow-brand: 0 4px 24px oklch(0.70 0.185 47 / 0.40); /* Lebih glowing di dark */
+  --shadow-wealth: 0 4px 20px oklch(0.64 0.185 152 / 0.35);
+  --shadow-card-hover: 0 8px 28px oklch(0 0 0 / 0.38),
+                       0 3px 8px  oklch(0 0 0 / 0.22);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   4. BASE STYLES
+   ═══════════════════════════════════════════════════════════════════ */
 @layer base {
+
+  html {
+    color-scheme: light dark;
+    scroll-behavior: smooth;
+    /* Cegah layout shift saat scrollbar muncul/hilang */
+    scrollbar-gutter: stable;
+  }
+
   body {
-    /* Tinted neutral background — warm, not cold gray */
-    background-color: var(--surface-bg);
-    @apply text-slate-800 font-sans;
-    transition: background-color 300ms var(--ease-out-expo),
-                color 300ms var(--ease-out-expo);
+    background-color: var(--color-bg-base);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Transition yang smooth saat ganti tema */
+    transition:
+      background-color var(--duration-normal) var(--ease-out-expo),
+      color            var(--duration-normal) var(--ease-out-expo);
   }
 
-  .dark body {
-    background-color: var(--surface-bg-dark);
-    @apply text-slate-100;
+  /* ── Angka finansial: SELALU tabular untuk alignment di tabel ── */
+  /* Berlaku untuk semua elemen yang mengandung angka */
+  [data-numeric],
+  .tabular,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 
-  /* Consistent focus ring — replaces naked focus:outline-none */
+  /* ── Global Focus Ring — konsisten, branded ── */
   *:focus-visible {
-    outline: 2px solid oklch(0.72 0.17 55);
+    outline: 2px solid var(--color-focus-ring);
     outline-offset: 2px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ── Headings: pakai font-display (Syne) secara default ── */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    color: var(--color-text-primary);
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--color-text-primary);
+  }
+
+  /* ── Links ── */
+  a {
+    color: var(--color-brand-600);
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-out-expo);
+  }
+  a:hover {
+    color: var(--color-brand-700);
+  }
+  .dark a {
+    color: var(--color-brand-400);
+  }
+  .dark a:hover {
+    color: var(--color-brand-300);
   }
 }
 
 
-/* ══════════════════════════════════════════════════════
-   STAGGERED CARD ANIMATION — Anti-symmetric entrance
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   5. UTILITY CLASSES — Design System Shortcuts
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Font display (Syne) */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Tabular numbers — wajib untuk semua angka finansial */
+.nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ── Card Variants ── */
+
+/* Card dasar: surface color + border + shadow */
+.card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow   var(--duration-fast) var(--ease-out-expo),
+    transform    var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+
+/* Card dengan hover effect (lift) */
+.card-interactive {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    box-shadow   var(--duration-fast) var(--ease-out-expo),
+    transform    var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-border-strong);
+}
+
+/* Glass card — untuk sidebar, header, modals */
+.card-glass {
+  background-color: oklch(1 0 0 / 0.80);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+}
+.dark .card-glass {
+  background-color: oklch(0.195 0.020 255 / 0.85);
+  border-color: var(--color-border);
+}
+
+/* ── Metric Card — Dashboard stat cards dengan stagger animation ── */
+.metric-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  animation: card-enter var(--duration-slow) var(--ease-out-expo) both;
+  transition:
+    box-shadow   var(--duration-fast) var(--ease-out-expo),
+    transform    var(--duration-fast) var(--ease-spring),
+    border-color var(--duration-fast) var(--ease-out-expo);
+}
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-border-strong);
+}
+
+/* Stagger delays — 4 cards */
+.metric-card:nth-child(1) { animation-delay: 0ms; }
+.metric-card:nth-child(2) { animation-delay: 70ms; }
+.metric-card:nth-child(3) { animation-delay: 140ms; }
+.metric-card:nth-child(4) { animation-delay: 210ms; }
+
+/* ── Buttons ── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    color            var(--duration-fast) var(--ease-out-expo),
+    border-color     var(--duration-fast) var(--ease-out-expo),
+    box-shadow       var(--duration-fast) var(--ease-out-expo),
+    transform        var(--duration-instant) var(--ease-spring);
+}
+.btn:hover  { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(0.98); }
+
+.btn-primary {
+  background-color: var(--color-brand-500);
+  color: var(--color-text-on-brand);
+  box-shadow: var(--shadow-brand);
+}
+.btn-primary:hover {
+  background-color: var(--color-brand-600);
+  box-shadow: 0 6px 24px oklch(0.70 0.185 47 / 0.40);
+}
+
+.btn-secondary {
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-xs);
+}
+.btn-secondary:hover {
+  background-color: var(--color-bg-sunken);
+  border-color: var(--color-border-strong);
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+.btn-ghost:hover {
+  background-color: var(--color-bg-sunken);
+  color: var(--color-text-primary);
+}
+
+/* ── Nav Item ── */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  position: relative;
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    color            var(--duration-fast) var(--ease-out-expo);
+}
+.nav-item:hover {
+  background-color: var(--color-brand-surface);
+  color: var(--color-brand-600);
+}
+.nav-item.active {
+  background-color: var(--color-brand-surface);
+  color: var(--color-brand-600);
+}
+.dark .nav-item:hover,
+.dark .nav-item.active {
+  background-color: var(--color-brand-surface);
+  color: var(--color-brand-400);
+}
+
+/* Active indicator: left accent bar */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 1.5rem;
+  background-color: var(--color-brand-500);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+}
+
+/* ── Input Base ── */
+.input {
+  width: 100%;
+  background-color: var(--color-bg-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  transition:
+    border-color var(--duration-fast) var(--ease-out-expo),
+    box-shadow   var(--duration-fast) var(--ease-out-expo);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+/* ── Badge / Chip ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.badge-brand   { background-color: var(--color-brand-surface);   color: var(--color-brand-700); }
+.badge-wealth  { background-color: var(--color-wealth-surface);  color: var(--color-wealth-700); }
+.badge-expense { background-color: var(--color-expense-surface); color: var(--color-expense-700); }
+.badge-invest  { background-color: var(--color-invest-surface);  color: var(--color-invest-700); }
+
+.dark .badge-brand   { color: var(--color-brand-300); }
+.dark .badge-wealth  { color: var(--color-wealth-300); }
+.dark .badge-expense { color: var(--color-expense-300); }
+.dark .badge-invest  { color: var(--color-invest-300); }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   6. ANIMATION KEYFRAMES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Card entrance — dipakai .metric-card */
 @keyframes card-enter {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -110,66 +560,152 @@
   }
 }
 
-.metric-card {
-  animation: card-enter 0.5s var(--ease-out-expo) both;
-}
-.metric-card:nth-child(1) { animation-delay: 0ms; }
-.metric-card:nth-child(2) { animation-delay: 60ms; }
-.metric-card:nth-child(3) { animation-delay: 120ms; }
-.metric-card:nth-child(4) { animation-delay: 180ms; }
-
-
-/* ══════════════════════════════════════════════════════
-   FONT-DISPLAY UTILITY (Syne for headings)
-   ══════════════════════════════════════════════════════ */
-.font-display {
-  font-family: var(--font-display);
-}
-
-
-/* ══════════════════════════════════════════════════════
-   KEYFRAMES
-   ══════════════════════════════════════════════════════ */
+/* Floating idle animation */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-5px); }
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
 }
 
-/* Shimmer — untuk skeleton loading state */
+/* Shimmer — skeleton loading */
 @keyframes shimmer {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(200%); }
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(200%); }
 }
 
-/* Live Price Flash — portofolio real-time indicator */
+/* Live price flash — naik */
 @keyframes price-up-flash {
-  0%   { color: #10b981; text-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
-  100% { color: inherit; text-shadow: none; }
+  0%   {
+    color: var(--color-wealth-500);
+    text-shadow: 0 0 12px oklch(0.64 0.185 152 / 0.4);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
 }
+
+/* Live price flash — turun */
 @keyframes price-down-flash {
-  0%   { color: #ef4444; text-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
-  100% { color: inherit; text-shadow: none; }
+  0%   {
+    color: var(--color-expense-500);
+    text-shadow: 0 0 12px oklch(0.62 0.200 23 / 0.4);
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
 }
+
 .price-flash-up   { animation: price-up-flash   1.5s var(--ease-out-expo); }
 .price-flash-down { animation: price-down-flash 1.5s var(--ease-out-expo); }
 
+/* Pulse dot — live indicator */
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(1.4); opacity: 0.6; }
+}
+.pulse-dot {
+  animation: pulse-dot 2s var(--ease-in-out-circ) infinite;
+}
 
-/* ══════════════════════════════════════════════════════
-   SCROLLBAR CUSTOM
-   ══════════════════════════════════════════════════════ */
-::-webkit-scrollbar        { width: 6px; height: 6px; }
+/* Number counter animation helper */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.count-enter {
+  animation: count-up var(--duration-slow) var(--ease-out-expo) both;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   7. SCROLLBAR CUSTOM — Minimal, branded
+   ═══════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: #cbd5e1; border-radius: 10px; }
-:is(.dark ::-webkit-scrollbar-thumb) { background: #334155; }
-::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+::-webkit-scrollbar-thumb  {
+  background: var(--color-border-strong);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
 
+/* Sidebar: sembunyikan scrollbar tapi tetap scrollable */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 
-/* ══════════════════════════════════════════════════════
-   PREFERS-REDUCED-MOTION — Accessibility mandatory
-   ══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   8. CHART THEMING — Recharts dark-mode aware overrides
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Recharts tooltip — override default white background */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: var(--color-bg-elevated) !important;
+  border: 1px solid var(--color-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+  color: var(--color-text-primary) !important;
+}
+
+/* Recharts tick labels */
+.recharts-cartesian-axis-tick-value {
+  fill: var(--color-text-tertiary) !important;
+}
+
+/* Recharts legend text */
+.recharts-legend-item-text {
+  color: var(--color-text-secondary) !important;
+}
+
+/* Recharts grid lines */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--color-border-subtle) !important;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   9. SKELETON LOADING — Warm-tinted shimmer
+   ═══════════════════════════════════════════════════════════════════ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg-sunken);
+  border-radius: var(--radius-sm);
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.92 0.008 60 / 0.6) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s var(--ease-in-out-circ) infinite;
+}
+.dark .skeleton {
+  background-color: var(--color-bg-elevated);
+}
+.dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.28 0.020 255 / 0.5) 50%,
+    transparent 100%
+  );
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   10. ACCESSIBILITY — prefers-reduced-motion
+   ═══════════════════════════════════════════════════════════════════ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

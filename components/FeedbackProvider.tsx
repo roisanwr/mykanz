@@ -17,21 +17,23 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [feedback, setFeedback] = useState({ message: '', type: 'success' as FeedbackType, title: '' });
 
   const showFeedback = (message: string, type: FeedbackType = 'success', title?: string) => {
-    // Default titles based on type
+    // Judul default dalam Bahasa Indonesia
     const defaultTitle = title || {
-      success: 'Success',
-      error: 'Error',
-      warning: 'Warning',
-      info: 'Message',
-      delete: 'Deleted'
+      success: 'Berhasil',
+      error:   'Gagal',
+      warning: 'Perhatian',
+      info:    'Informasi',
+      delete:  'Dihapus'
     }[type];
 
     setFeedback({ message, type, title: defaultTitle });
     setIsOpen(true);
     setTimeout(() => {
       setIsOpen(false);
-    }, 3000); // Auto close after 3 seconds
+    }, 3500);
   };
+
+  const dismissFeedback = () => setIsOpen(false);
 
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => setMounted(true), []);
@@ -66,26 +68,34 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
     <FeedbackContext.Provider value={{ showFeedback }}>
       {children}
       {mounted && isOpen && createPortal(
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] pointer-events-none">
-          <div className={`pointer-events-auto ${currentStyle.bg} rounded-xl shadow-lg animate-in slide-in-from-top-10 fade-in duration-300 w-full min-w-[320px] max-w-md flex items-center p-4 gap-4`}>
-             <div className="flex-shrink-0">
-               {currentStyle.icon}
-             </div>
-             <div className="flex flex-col text-white">
-               <h3 className="text-xl font-medium tracking-wide">
-                 {feedback.title}
-               </h3>
-               {feedback.message && (
-                 <p className="text-white/90 text-sm font-medium mt-0.5 max-w-[200px] leading-tight">
-                   {feedback.message}
-                 </p>
-               )}
-               {/* Decorative Lines mimicking the image */}
-               <div className="mt-2 space-y-1.5 opacity-90">
-                 <div className="h-1.5 bg-white rounded-full w-full"></div>
-                 <div className="h-1.5 bg-white rounded-full w-2/3"></div>
-               </div>
-             </div>
+        <div
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-[10000] pointer-events-none"
+        >
+          <div className={`pointer-events-auto ${currentStyle.bg} rounded-2xl shadow-2xl animate-in slide-in-from-top-4 fade-in duration-300 w-full min-w-[300px] max-w-sm flex items-start p-4 gap-3`}>
+            <div className="flex-shrink-0 mt-0.5">
+              {currentStyle.icon}
+            </div>
+            <div className="flex-1 flex flex-col text-white min-w-0">
+              <h3 className="text-base font-bold leading-tight">
+                {feedback.title}
+              </h3>
+              {feedback.message && (
+                <p className="text-white/85 text-sm font-medium mt-1 leading-snug">
+                  {feedback.message}
+                </p>
+              )}
+            </div>
+            {/* Tombol dismiss manual */}
+            <button
+              onClick={dismissFeedback}
+              aria-label="Tutup notifikasi"
+              className="flex-shrink-0 text-white/70 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>,
         document.body

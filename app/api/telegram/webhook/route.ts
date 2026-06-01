@@ -257,15 +257,47 @@ export async function POST(req: Request) {
         }
       }
 
-      const parsed = await parseTransactionWithAI(textContent, imageBase64, existingData);
+      let parsed = null;
+      let isManualFallback = false;
+
+      // --- MANUAL FALLBACK PARSER ---
+      // Cek apakah pesan menggunakan format manual: "- 25000 beli nasi" atau "+ 500000 gaji"
+      if (textContent) {
+        const manualMatch = textContent.trim().match(/^([+-])\s*([\d.,]+)\s+(.+)$/i);
+        if (manualMatch) {
+          const sign = manualMatch[1];
+          // bersihkan titik/koma kalau user iseng ketik 25.000
+          const amount = parseInt(manualMatch[2].replace(/[.,]/g, ''), 10); 
+          const description = manualMatch[3].trim();
+          
+          parsed = {
+            amount,
+            date: new Date().toISOString().split('T')[0],
+            store_name: description,
+            category_guess: 'lainnya', // fallback
+            items_summary: description,
+            type: sign === '+' ? 'PEMASUKAN' : 'PENGELUARAN',
+            feedback: 'Mencatat menggunakan mode manual (tanpa AI).'
+          } as any; // cast as ParsedTransaction
+          
+          isManualFallback = true;
+        }
+      }
+
+      // Jika bukan format manual, lempar ke AI
+      if (!isManualFallback) {
+        parsed = await parseTransactionWithAI(textContent, imageBase64, existingData);
+      }
 
       if (!parsed) {
         await sendMessage(chatId,
-          `🤷 AI tidak dapat memproses pesan ini.\n\n` +
-          `Coba format yang lebih jelas, contoh:\n` +
-          `<code>beli nasi goreng 25000</code>\n` +
-          `<code>terima transfer 500000</code>\n` +
-          `Atau kirim foto struk yang lebih terang.`
+          `🤖 <b>Oops, AI sedang sibuk atau offline!</b>\n\n` +
+          `Tapi tenang, kamu tetap bisa mencatat transaksi dengan <b>Format Manual</b>:\n\n` +
+          `🔴 <b>PENGELUARAN (Tanda Minus)</b>\n` +
+          `<code>- 25000 beli nasi padang</code>\n\n` +
+          `🟢 <b>PEMASUKAN (Tanda Plus)</b>\n` +
+          `<code>+ 500000 gaji bulan ini</code>\n\n` +
+          `Silakan balas dengan format di atas, ya!`
         );
         return NextResponse.json({ ok: true });
       }
@@ -288,14 +320,16 @@ export async function POST(req: Request) {
           await sendMessage(chatId, `💬 <i>${parsed.feedback}</i>`);
           return NextResponse.json({ ok: true });
         } else {
-          await sendMessage(chatId,
-            `🤷 AI tidak dapat mengenali transaksi dari pesan ini.\n\n` +
-            `Coba format yang lebih jelas, contoh:\n` +
-            `<code>beli nasi goreng 25000</code>\n` +
-            `<code>terima transfer 500000</code>\n` +
-            `Atau kirim foto struk yang lebih terang.`
-          );
-          return NextResponse.json({ ok: true });
+            await sendMessage(chatId,
+              `🤖 <b>Oops, AI sedang sibuk atau offline!</b>\n\n` +
+              `Tapi tenang, kamu tetap bisa mencatat transaksi dengan <b>Format Manual</b>:\n\n` +
+              `🔴 <b>PENGELUARAN (Tanda Minus)</b>\n` +
+              `<code>- 25000 beli nasi padang</code>\n\n` +
+              `🟢 <b>PEMASUKAN (Tanda Plus)</b>\n` +
+              `<code>+ 500000 gaji bulan ini</code>\n\n` +
+              `Silakan balas dengan format di atas, ya!`
+            );
+            return NextResponse.json({ ok: true });
         }
       }
 

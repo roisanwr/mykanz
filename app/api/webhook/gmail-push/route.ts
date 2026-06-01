@@ -7,6 +7,7 @@ import { google } from 'googleapis';
 import prisma from '@/lib/prisma';
 import { getClientForUser, handleInvalidGrant } from '@/lib/gmail/token-manager';
 import { parseTransactionFromEmail } from '@/lib/gmail/parser';
+import { findBestMatchingCategory } from '@/lib/category-matcher';
 import type { ParsedGmailTx } from '@/lib/gmail/parser';
 
 // Berikan Vercel cukup waktu untuk proses background
@@ -181,27 +182,43 @@ async function saveTransactionIfNotDuplicate(
     return;
   }
 
-  // Cari atau buat kategori "Gmail Import"
-  const categoryName = 'Gmail Import';
-  let category = await prisma.categories.findFirst({
-    where: {
-      user_id: userId,
-      name: categoryName,
-      type: tx.type === 'PEMASUKAN' ? 'PEMASUKAN' : 'PENGELUARAN',
-      deleted_at: null,
-    },
-    select: { id: true },
+  const txType = tx.type === 'PEMASUKAN' ? 'PEMASUKAN' : 'PENGELUARAN';
+
+  // === SMART CATEGORY MATCHING ===
+  // 1. Ambil semua kategori user yang sesuai tipe transaksi
+  const userCategories = await prisma.categories.findMany({
+    where: { user_id: userId, type: txType, deleted_at: null },
+    select: { id: true, name: true },
   });
 
-  if (!category) {
-    category = await prisma.categories.create({
-      data: {
-        user_id: userId,
-        name: categoryName,
-        type: tx.type === 'PEMASUKAN' ? 'PEMASUKAN' : 'PENGELUARAN',
-      },
+  // 2. Fuzzy-match berdasarkan category_hint dari parser
+  const matchedCategory = findBestMatchingCategory(userCategories, tx.category_hint);
+
+  let categoryId: string;
+  let needsReview: boolean;
+
+  if (matchedCategory) {
+    // Match ditemukan → pakai kategori user yang sudah ada
+    categoryId = matchedCategory.id;
+    needsReview = false;
+    console.log(
+      `[Gmail Webhook] Category match: "${matchedCategory.name}" (hint: ${tx.category_hint})`,
+    );
+  } else {
+    // Tidak ada match → buat/pakai kategori fallback per-sumber
+    // Format: "Gmail: BCA", "Gmail: GoPay", dst. — lebih informatif dari "Gmail Import"
+    const fallbackName = `Gmail: ${tx.source}`;
+    const fallbackCategory = await prisma.categories.upsert({
+      where: { user_id_name_type: { user_id: userId, name: fallbackName, type: txType } },
+      create: { user_id: userId, name: fallbackName, type: txType },
+      update: {},
       select: { id: true },
     });
+    categoryId = fallbackCategory.id;
+    needsReview = true; // Tandai butuh review karena kategori tidak spesifik
+    console.log(
+      `[Gmail Webhook] No category match, using fallback "${fallbackName}" (hint: ${tx.category_hint})`,
+    );
   }
 
   // Insert transaksi
@@ -209,18 +226,21 @@ async function saveTransactionIfNotDuplicate(
     data: {
       user_id: userId,
       wallet_id: walletId,
-      category_id: category.id,
-      transaction_type: tx.type,
+      category_id: categoryId,
+      transaction_type: txType,
       amount: tx.amount,
       description: tx.merchant
         ? `[${tx.source}] ${tx.merchant}`
         : `[${tx.source}] Auto-import via Gmail`,
       transaction_date: tx.date,
       gmail_msg_id: gmailMsgId,
+      source_channel: 'GMAIL',
+      needs_review: needsReview,
     },
   });
 
   console.log(
-    `[Gmail Webhook] Inserted transaksi: ${tx.type} Rp${tx.amount.toLocaleString()} dari ${tx.source}`,
+    `[Gmail Webhook] Inserted: ${tx.type} Rp${tx.amount.toLocaleString()} dari ${tx.source}` +
+    ` | kategori: ${needsReview ? '⚠️ butuh review' : '✅ auto-match'}`,
   );
 }

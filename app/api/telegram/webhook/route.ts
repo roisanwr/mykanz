@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { validateWebhookSecret, sendMessage, getFile, editMessageText, answerCallbackQuery } from '@/lib/telegram';
 import { parseTransactionWithAI } from '@/lib/github_models';
+import { sortCategoriesByHint } from '@/lib/category-matcher';
 import { fiat_tx_type } from '@prisma/client';
 
 export const maxDuration = 60;
@@ -350,9 +351,13 @@ export async function POST(req: Request) {
           where: { user_id: user.id, type: parsed.type as fiat_tx_type, deleted_at: null },
           orderBy: { name: 'asc' }
         });
+        const sortedCategories = sortCategoriesByHint(categories, parsed.category_guess);
         keyboard = {
           inline_keyboard: [
-            ...categories.map(c => [{ text: `🗂 ${c.name}`, callback_data: `category:${c.id}` }]),
+            ...sortedCategories.map(({ category: c, isMatch }) => [{
+              text: isMatch ? `⭐ ${c.name}` : `🗂 ${c.name}`,
+              callback_data: `category:${c.id}`
+            }]),
             [{ text: '➕ Tambah Kategori Baru', callback_data: 'action:new_category' }],
             [{ text: '❌ Batal', callback_data: 'action:cancel' }]
           ]
@@ -427,9 +432,13 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
       orderBy: { name: 'asc' }
     });
 
+    const sortedCategories = sortCategoriesByHint(categories, parsedData.category_guess);
     const keyboard = {
       inline_keyboard: [
-        ...categories.map(c => [{ text: `🗂 ${c.name}`, callback_data: `category:${c.id}` }]),
+        ...sortedCategories.map(({ category: c, isMatch }) => [{
+          text: isMatch ? `⭐ ${c.name}` : `🗂 ${c.name}`,
+          callback_data: `category:${c.id}`
+        }]),
         [{ text: '➕ Tambah Kategori Baru', callback_data: 'action:new_category' }],
         [{ text: '❌ Batal', callback_data: 'action:cancel' }]
       ]
@@ -437,7 +446,7 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
 
     await editMessageText(chatId, messageId,
       `💳 Dompet terpilih: <b>${wallet.name}</b>\n\n` +
-      `Tebakan AI Kategori: ${parsedData.category_guess}\n\n` +
+      `Tebakan AI Kategori: ${parsedData.category_guess} (⭐ = paling cocok)\n\n` +
       `Silakan pilih kategori dari daftar di bawah ini atau tambah baru:\n\n` +
       `<i>Ketik pesan jika ada yang ingin dikoreksi.</i>`,
       { reply_markup: keyboard }
@@ -515,7 +524,9 @@ async function processCallbackQuery(chatId: string, messageId: number, queryId: 
           transaction_type: parsedData.type as fiat_tx_type,
           amount: parsedData.amount,
           description: parsedData.items_summary || parsedData.store_name || 'Dicatat via Telegram Bot',
-          transaction_date: parsedData.date ? new Date(parsedData.date) : new Date()
+          transaction_date: parsedData.date ? new Date(parsedData.date) : new Date(),
+          source_channel: 'TELEGRAM',
+          needs_review: false, // User sudah konfirmasi manual
         }
       });
 

@@ -1,6 +1,8 @@
 // lib/gmail/parser.ts
 // Parser email transaksi dari berbagai bank/e-wallet Indonesia
 
+import { inferCategoryHint, type CategoryHint } from '../category-matcher';
+
 export interface ParsedGmailTx {
   source: string;           // Nama bank/e-wallet, e.g. "BCA", "GoPay"
   type: 'PEMASUKAN' | 'PENGELUARAN';
@@ -8,6 +10,7 @@ export interface ParsedGmailTx {
   merchant: string | null;  // nama merchant/toko jika ada
   currency: string;         // default "IDR"
   date: Date;               // tanggal transaksi dari isi email
+  category_hint: CategoryHint; // tebakan kategori untuk fuzzy-match ke kategori user
 }
 
 interface EmailParts {
@@ -174,6 +177,7 @@ function parseBCA({ subject, body, date }: EmailParts): ParsedGmailTx | null {
     merchant,
     currency: 'IDR',
     date,
+    category_hint: inferCategoryHint(merchant, 'BCA'),
   };
 }
 
@@ -200,6 +204,7 @@ function parseGoPay({ subject, body, date }: EmailParts): ParsedGmailTx | null {
     merchant,
     currency: 'IDR',
     date,
+    category_hint: inferCategoryHint(merchant, 'GoPay'),
   };
 }
 
@@ -225,6 +230,7 @@ function parseOVO({ subject, body, date }: EmailParts): ParsedGmailTx | null {
     merchant,
     currency: 'IDR',
     date,
+    category_hint: inferCategoryHint(merchant, 'OVO'),
   };
 }
 
@@ -250,6 +256,7 @@ function parseMandiri({ subject, body, date }: EmailParts): ParsedGmailTx | null
     merchant,
     currency: 'IDR',
     date,
+    category_hint: inferCategoryHint(merchant, 'Mandiri'),
   };
 }
 
@@ -277,6 +284,7 @@ function parseTokopedia({ subject, body, date }: EmailParts): ParsedGmailTx | nu
     merchant,
     currency: 'IDR',
     date,
+    category_hint: 'belanja_online', // Tokopedia selalu belanja online
   };
 }
 
@@ -302,5 +310,6 @@ function parseShopee({ subject, body, date }: EmailParts): ParsedGmailTx | null 
     merchant,
     currency: 'IDR',
     date,
+    category_hint: 'belanja_online', // Shopee selalu belanja online
   };
 }

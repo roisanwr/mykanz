@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { 
-  Menu, Bitcoin, Moon, Sun, Bell, LayoutDashboard, 
+  Menu, Moon, Sun, Bell, LayoutDashboard, 
   Wallet, Rocket, Target, PieChart, Settings, Leaf, 
   LogOut, User as UserIcon, X, ArrowRightLeft, Tags, ChevronDown, CalendarRange
 } from 'lucide-react'
@@ -132,9 +132,11 @@ export default function DashboardLayout({ children, user }: { children: React.Re
             </button>
 
             <Link href="/" className="flex items-center space-x-3 group cursor-pointer">
-              <div className="flex items-center justify-center w-10 h-10 rounded-none bg-[oklch(0.65_0.2_35)] shadow-[4px_4px_0px_oklch(0.4_0.1_35)] group-hover:translate-x-[2px] group-hover:translate-y-[2px] group-hover:shadow-[2px_2px_0px_oklch(0.4_0.1_35)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-                <Bitcoin className="w-6 h-6 text-white drop-shadow-md" />
-              </div>
+              <img 
+                src="/logomykanz.png" 
+                alt="MyKanz Logo" 
+                className="w-10 h-10 object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]" 
+              />
               <div className="flex flex-col">
                 <h1 className="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-none group-hover:text-orange-600 transition-colors">
                   MyKanz.

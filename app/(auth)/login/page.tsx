@@ -60,11 +60,11 @@ export default function LoginPage() {
       >
         {/* Brand header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4"
-            style={{ backgroundColor: "oklch(0.72 0.18 55)" }}
-          >
-            <span className="text-white font-black text-xl font-display">M</span>
-          </div>
+          <img 
+            src="/logomykanz.png" 
+            alt="MyKanz Logo" 
+            className="w-20 h-20 object-contain mx-auto mb-4 drop-shadow-2xl" 
+          />
           <h1 className="font-display text-3xl font-black text-white tracking-tight">MyKanz</h1>
           <p className="text-sm mt-1.5" style={{ color: "oklch(0.65 0.04 250)" }}>
             Masuk untuk mulai kelola kekayaanmu.

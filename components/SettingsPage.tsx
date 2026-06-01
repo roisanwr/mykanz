@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useFeedback } from '@/components/FeedbackProvider';
 
-type Section = 'profile' | 'password' | 'export' | 'telegram' | 'danger';
+type Section = 'profile' | 'password' | 'export' | 'telegram' | 'gmail' | 'danger';
 
 interface UserData {
   id: string;
@@ -18,7 +18,19 @@ interface UserData {
   created_at: string | null;
 }
 
-export default function SettingsPage({ user }: { user: UserData }) {
+interface GmailStatus {
+  connected: boolean;
+  email: string | null;
+  needs_reauth: boolean;
+}
+
+export default function SettingsPage({
+  user,
+  gmailStatus,
+}: {
+  user: UserData;
+  gmailStatus: GmailStatus;
+}) {
   const router = useRouter();
   const { showFeedback } = useFeedback();
   const [activeSection, setActiveSection] = useState<Section>('profile');
@@ -173,12 +185,63 @@ export default function SettingsPage({ user }: { user: UserData }) {
     setTgLoading(false);
   };
 
+  // ── Gmail Connect ─────────────────────────────────────────
+  const [gmailConnected, setGmailConnected] = useState(gmailStatus.connected);
+  const [gmailEmail, setGmailEmail] = useState(gmailStatus.email);
+  const [gmailNeedsReauth, setGmailNeedsReauth] = useState(gmailStatus.needs_reauth);
+  const [gmailLoading, setGmailLoading] = useState(false);
+
+  const handleConnectGmail = () => {
+    window.location.href = '/api/auth/google';
+  };
+
+  const handleDisconnectGmail = async () => {
+    setGmailLoading(true);
+    try {
+      const res = await fetch('/api/gmail/status', { method: 'DELETE' });
+      if (res.ok) {
+        setGmailConnected(false);
+        setGmailEmail(null);
+        setGmailNeedsReauth(false);
+        showFeedback('Gmail berhasil diputuskan.', 'success');
+      } else {
+        showFeedback('Gagal memutuskan koneksi Gmail.', 'error');
+      }
+    } catch {
+      showFeedback('Gagal terhubung ke server.', 'error');
+    }
+    setGmailLoading(false);
+  };
+
+  // Deteksi URL param dari Google OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gmailParam = params.get('gmail');
+    if (gmailParam === 'connected') {
+      showFeedback('Gmail berhasil dihubungkan! 🎉', 'success');
+      setGmailConnected(true);
+      setActiveSection('gmail');
+      // Bersihkan URL param
+      window.history.replaceState({}, '', '/settings');
+    } else if (gmailParam === 'error') {
+      showFeedback('Gagal menghubungkan Gmail. Coba lagi.', 'error');
+      setActiveSection('gmail');
+      window.history.replaceState({}, '', '/settings');
+    } else if (gmailParam === 'denied') {
+      showFeedback('Kamu membatalkan koneksi Gmail.', 'error');
+      setActiveSection('gmail');
+      window.history.replaceState({}, '', '/settings');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Nav Items ─────────────────────────────────────────────
   const navItems: { id: Section; label: string; icon: React.ElementType; danger?: boolean }[] = [
     { id: 'profile', label: 'Edit Profil', icon: User },
     { id: 'password', label: 'Ganti Password', icon: Lock },
     { id: 'export', label: 'Export Data', icon: Download },
     { id: 'telegram', label: 'Telegram Bot', icon: Bot },
+    { id: 'gmail', label: 'Gmail Connect', icon: Mail },
     { id: 'danger', label: 'Hapus Akun', icon: Trash2, danger: true },
   ];
 
@@ -536,6 +599,103 @@ export default function SettingsPage({ user }: { user: UserData }) {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Gmail Connect ── */}
+          {activeSection === 'gmail' && (
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-orange-500" /> Gmail Connect
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Catat transaksi otomatis dari email notifikasi bank &amp; e-wallet.
+                </p>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {gmailLoading ? (
+                  <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>
+                ) : gmailConnected && !gmailNeedsReauth ? (
+                  // ── Status: Connected ──
+                  <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl p-5 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center mb-3">
+                      <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <h3 className="font-bold text-emerald-800 dark:text-emerald-400 mb-1">Gmail Terhubung!</h3>
+                    {gmailEmail && (
+                      <p className="text-sm text-emerald-700 dark:text-emerald-500 mb-1 font-mono">{gmailEmail}</p>
+                    )}
+                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mb-4">
+                      Transaksi dari email akan dicatat otomatis ke dashboard kamu.
+                    </p>
+                    <button
+                      onClick={handleDisconnectGmail}
+                      className="text-sm font-semibold text-red-500 hover:text-red-600 px-4 py-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-red-100 dark:border-red-900/30"
+                    >
+                      Putuskan Koneksi
+                    </button>
+                  </div>
+                ) : gmailNeedsReauth ? (
+                  // ── Status: Needs Re-auth ──
+                  <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-5 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-amber-100 dark:bg-amber-500/20 rounded-full flex items-center justify-center mb-3">
+                      <ShieldAlert className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h3 className="font-bold text-amber-800 dark:text-amber-400 mb-1">Diperlukan Reconnect</h3>
+                    <p className="text-sm text-amber-600 dark:text-amber-500 mb-4">
+                      Akses Gmail kamu sudah tidak valid. Silakan hubungkan ulang.
+                    </p>
+                    <button
+                      onClick={handleConnectGmail}
+                      className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-orange-500/25 transition-all"
+                    >
+                      Hubungkan Ulang Gmail
+                    </button>
+                  </div>
+                ) : (
+                  // ── Status: Not connected ──
+                  <div className="space-y-4">
+                    {/* Penjelasan cara kerja */}
+                    <div className="grid grid-cols-1 gap-3">
+                      {[
+                        { icon: '📧', title: 'Auto-detect transaksi', desc: 'Baca email BCA, GoPay, OVO, Mandiri, Tokopedia, Shopee.' },
+                        { icon: '🔒', title: 'Privasi terjaga', desc: 'MyKanz hanya membaca notifikasi transaksi — tidak pernah mengirim email.' },
+                        { icon: '⚡', title: 'Real-time', desc: 'Transaksi tercatat dalam hitungan detik setelah email masuk.' },
+                      ].map((item) => (
+                        <div key={item.title} className="flex gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <span className="text-xl shrink-0">{item.icon}</span>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.title}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{item.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Warning Unverified App */}
+                    <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-300">
+                      <p className="font-semibold mb-1">⚠️ Catatan penting</p>
+                      <p className="text-xs leading-relaxed">
+                        Google akan menampilkan layar <strong>&quot;Unverified App&quot;</strong> saat pertama kali connect.
+                        Klik <strong>Advanced → Proceed to MyKanz (unsafe)</strong> untuk melanjutkan.
+                        Ini normal — MyKanz belum melewati proses verifikasi Google yang membutuhkan waktu berbulan-bulan.
+                        Data kamu tetap aman, MyKanz hanya <strong>membaca</strong> email notifikasi transaksi.
+                      </p>
+                    </div>
+
+                    <button
+                      id="btn-connect-gmail"
+                      onClick={handleConnectGmail}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-500/25 transition-all"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Hubungkan Gmail
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

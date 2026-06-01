@@ -114,6 +114,9 @@ model fiat_transactions {
   event_id                                        String?              @db.Uuid
   events                                          events?              @relation(fields: [event_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
+  // === Gmail Auto-Capture ===
+  gmail_msg_id                                    String?              @unique  // deduplication: 1 Gmail msg = 1 transaksi
+
   @@index([user_id, transaction_date], map: "idx_fiat_tx_user_date")
   @@index([wallet_id], map: "idx_fiat_tx_wallet")
   @@index([event_id], map: "idx_fiat_tx_event")
@@ -168,6 +171,16 @@ model users {
   telegram_token_expires_at  DateTime?            @db.Timestamptz(6)
   default_wallet_id          String?              @db.Uuid
 
+  // === Gmail OAuth Integration ===
+  gmail_email                String?
+  gmail_access_token         String?              // dienkripsi AES-256-GCM
+  gmail_refresh_token        String?              // dienkripsi AES-256-GCM, long-lived
+  gmail_token_expiry         BigInt?              // unix milliseconds, access token ~1 jam
+  gmail_history_id           String?              // untuk incremental history polling
+  gmail_watch_expiry         DateTime?            @db.Timestamptz(6)  // expire tiap 7 hari
+  gmail_connected            Boolean              @default(false)
+  gmail_needs_reauth         Boolean              @default(false)
+
   // === Relations ===
   asset_transactions asset_transactions[]
   assets             assets[]
@@ -180,6 +193,8 @@ model users {
   wallets            wallets[]
   default_wallet     wallets?             @relation("default_wallet", fields: [default_wallet_id], references: [id], onUpdate: NoAction)
   telegram_sessions  telegram_sessions[]
+
+  @@index([gmail_email], map: "idx_users_gmail_email")
 }
 
 model telegram_sessions {

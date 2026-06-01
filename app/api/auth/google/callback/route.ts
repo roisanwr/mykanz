@@ -1,0 +1,30 @@
+// app/api/auth/google/callback/route.ts
+// Dipanggil Google setelah user approve/deny consent screen
+
+import { NextRequest } from 'next/server';
+import { handleCallback } from '@/lib/gmail/oauth';
+import { redirect } from 'next/navigation';
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const code = searchParams.get('code');
+  const userId = searchParams.get('state');
+  const error = searchParams.get('error');
+
+  // User membatalkan / menolak consent
+  if (error) {
+    return redirect('/settings?gmail=denied');
+  }
+
+  if (!code || !userId) {
+    return redirect('/settings?gmail=error');
+  }
+
+  try {
+    await handleCallback(code, userId);
+    return redirect('/settings?gmail=connected');
+  } catch (err) {
+    console.error('[Gmail Callback] Error:', err);
+    return redirect('/settings?gmail=error');
+  }
+}

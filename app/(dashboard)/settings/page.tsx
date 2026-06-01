@@ -15,7 +15,16 @@ export default async function Settings() {
 
   const user = await prisma.users.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, created_at: true },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      created_at: true,
+      // Gmail status
+      gmail_connected: true,
+      gmail_email: true,
+      gmail_needs_reauth: true,
+    },
   });
 
   if (!user) redirect('/login');
@@ -27,6 +36,11 @@ export default async function Settings() {
         name: user.name,
         email: user.email,
         created_at: user.created_at?.toISOString() ?? null,
+      }}
+      gmailStatus={{
+        connected: user.gmail_connected,
+        email: user.gmail_email,
+        needs_reauth: user.gmail_needs_reauth,
       }}
     />
   );

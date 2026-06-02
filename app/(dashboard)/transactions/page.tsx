@@ -2,11 +2,13 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import TransactionList from '@/components/TransactionList';
 import TransactionFilters from '@/components/TransactionFilters';
-import { TrendingDown, TrendingUp, FilterX, ArrowLeftRight } from 'lucide-react';
-import { fiat_tx_type } from '@prisma/client';
+import { TrendingDown, TrendingUp, ArrowLeftRight, FilterX, Plus, Receipt } from 'lucide-react';
+import { MetricCard } from '@/components/shared/MetricCard';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 const PAGE_SIZE = 50;
 
@@ -19,8 +21,8 @@ export default async function TransactionsPage(props: {
   const searchParams = await props.searchParams;
   const {
     type,
-    categoryIds, // comma-separated IDs, e.g. "id1,id2"
-    walletIds,   // comma-separated IDs, e.g. "id1,id2"
+    categoryIds,
+    walletIds,
     startDate,
     endDate,
     search,
@@ -31,7 +33,6 @@ export default async function TransactionsPage(props: {
 
   const currentPage = Math.max(1, parseInt(page || '1', 10));
 
-  // Fetch Wallets & Categories for the filter UI (lightweight)
   const [wallets, categories, events] = await Promise.all([
     prisma.wallets.findMany({
       where: { user_id: session.user.id, deleted_at: null },
@@ -47,14 +48,10 @@ export default async function TransactionsPage(props: {
     }),
   ]);
 
-  // ─── Build Dynamic Where Clause ──────────────────────────────────────────────
-  const whereClause: any = { user_id: session.user.id };
+  const whereClause: Record<string, unknown> = { user_id: session.user.id };
 
-  if (type) {
-    whereClause.transaction_type = type as fiat_tx_type;
-  }
+  if (type) whereClause.transaction_type = type;
 
-  // Multi-select categories (comma-separated)
   const categoryIdList = categoryIds
     ? categoryIds.split(',').map(s => s.trim()).filter(Boolean)
     : [];
@@ -62,7 +59,6 @@ export default async function TransactionsPage(props: {
     whereClause.category_id = { in: categoryIdList };
   }
 
-  // Multi-select wallets (comma-separated) — matches source OR destination
   const walletIdList = walletIds
     ? walletIds.split(',').map(s => s.trim()).filter(Boolean)
     : [];
@@ -74,9 +70,10 @@ export default async function TransactionsPage(props: {
   }
 
   if (startDate || endDate) {
-    whereClause.transaction_date = {};
-    if (startDate) whereClause.transaction_date.gte = new Date(`${startDate}T00:00:00.000Z`);
-    if (endDate)   whereClause.transaction_date.lte = new Date(`${endDate}T23:59:59.999Z`);
+    whereClause.transaction_date = {} as Record<string, unknown>;
+    const dateClause = whereClause.transaction_date as Record<string, unknown>;
+    if (startDate) dateClause.gte = new Date(`${startDate}T00:00:00.000Z`);
+    if (endDate)   dateClause.lte = new Date(`${endDate}T23:59:59.999Z`);
   }
 
   if (search?.trim()) {
@@ -84,33 +81,27 @@ export default async function TransactionsPage(props: {
   }
 
   if (minAmount || maxAmount) {
-    whereClause.amount = {};
-    if (minAmount) whereClause.amount.gte = parseFloat(minAmount);
-    if (maxAmount) whereClause.amount.lte = parseFloat(maxAmount);
+    whereClause.amount = {} as Record<string, unknown>;
+    const amtClause = whereClause.amount as Record<string, unknown>;
+    if (minAmount) amtClause.gte = parseFloat(minAmount);
+    if (maxAmount) amtClause.lte = parseFloat(maxAmount);
   }
 
-  // ─── QUERY 1: Full summary (no limit) — for accurate totals ──────────────────
-  // Only selects the two columns we need, very cheap even with 10k+ rows
+  // Query 1: summary totals
   const summaryRows = await prisma.fiat_transactions.findMany({
     where: whereClause,
     select: { transaction_type: true, amount: true },
   });
 
-  const totalIncome   = summaryRows
-    .filter(tx => tx.transaction_type === 'PEMASUKAN')
-    .reduce((acc, tx) => acc + Number(tx.amount), 0);
-  const totalExpense  = summaryRows
-    .filter(tx => tx.transaction_type === 'PENGELUARAN')
-    .reduce((acc, tx) => acc + Number(tx.amount), 0);
-  const totalTransfer = summaryRows
-    .filter(tx => tx.transaction_type === 'TRANSFER')
-    .reduce((acc, tx) => acc + Number(tx.amount), 0);
+  const totalIncome   = summaryRows.filter(tx => tx.transaction_type === 'PEMASUKAN').reduce((s, tx) => s + Number(tx.amount), 0);
+  const totalExpense  = summaryRows.filter(tx => tx.transaction_type === 'PENGELUARAN').reduce((s, tx) => s + Number(tx.amount), 0);
+  const totalTransfer = summaryRows.filter(tx => tx.transaction_type === 'TRANSFER').reduce((s, tx) => s + Number(tx.amount), 0);
 
   const totalCount = summaryRows.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const safePage   = Math.min(currentPage, totalPages);
 
-  // ─── QUERY 2: Paginated list for display ─────────────────────────────────────
+  // Query 2: paginated list
   const transactionsRaw = await prisma.fiat_transactions.findMany({
     where: whereClause,
     orderBy: { transaction_date: 'desc' },
@@ -130,127 +121,102 @@ export default async function TransactionsPage(props: {
     exchange_rate: tx.exchange_rate ? Number(tx.exchange_rate) : null,
   }));
 
-  const formatRupiah = (angka: number) =>
-    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+  const formatCompact = (n: number) =>
+    new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
 
+  const net = totalIncome - totalExpense;
   const hasActiveFilters = !!(type || categoryIds || walletIds || startDate || endDate || search || minAmount || maxAmount);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* ── HEADER ─────────────────────────────────────────────────────────────── */}
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          <h1
+            className="font-display font-black tracking-tight"
+            style={{ fontSize: 'var(--text-3xl)', color: 'var(--color-text-primary)' }}
+          >
             Riwayat Transaksi
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Pantau arus kas masuk, keluar, dan transfer uangmu.
             {hasActiveFilters && (
-              <span className="ml-2 text-orange-500 font-semibold">
-                ({totalCount.toLocaleString('id-ID')} transaksi ditemukan)
+              <span className="ml-2 font-bold" style={{ color: 'var(--color-brand-500)' }}>
+                ({totalCount.toLocaleString('id-ID')} hasil ditemukan)
               </span>
             )}
           </p>
         </div>
-        <AddTransactionModal wallets={wallets} categories={categories} events={events as any[]} />
+        <AddTransactionModal wallets={wallets} categories={categories} events={events as unknown[]} />
       </div>
 
-      {/* ── SUMMARY STATS (based on ALL matching rows, not just current page) ─── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Pemasukan */}
-        <div className="bg-[oklch(0.96_0.02_150)] dark:bg-[oklch(0.2_0.02_150)] border-l-4 border-[oklch(0.6_0.15_150)] rounded-none p-6 flex items-center justify-between shadow-none">
-          <div>
-            <p className="text-emerald-700 dark:text-emerald-400 font-semibold text-sm mb-0.5">
-              Total Pemasukan
-            </p>
-            <h3 className="text-2xl font-black text-emerald-700 dark:text-emerald-300 leading-tight">
-              {formatRupiah(totalIncome)}
-            </h3>
-            {hasActiveFilters && (
-              <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500 mt-1">
-                dari {summaryRows.filter(t => t.transaction_type === 'PEMASUKAN').length} transaksi
-              </p>
-            )}
-          </div>
-          <div className="p-3 bg-emerald-200 dark:bg-emerald-500/20 rounded-none border-2 shrink-0">
-            <TrendingUp className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-        </div>
-
-        {/* Pengeluaran */}
-        <div className="bg-[oklch(0.96_0.02_20)] dark:bg-[oklch(0.2_0.02_20)] border-l-4 border-[oklch(0.6_0.15_20)] rounded-none p-6 flex items-center justify-between shadow-none">
-          <div>
-            <p className="text-rose-700 dark:text-rose-400 font-semibold text-sm mb-0.5">
-              Total Pengeluaran
-            </p>
-            <h3 className="text-2xl font-black text-rose-700 dark:text-rose-300 leading-tight">
-              {formatRupiah(totalExpense)}
-            </h3>
-            {hasActiveFilters && (
-              <p className="text-[10px] text-rose-600/70 dark:text-rose-500 mt-1">
-                dari {summaryRows.filter(t => t.transaction_type === 'PENGELUARAN').length} transaksi
-              </p>
-            )}
-          </div>
-          <div className="p-3 bg-rose-200 dark:bg-rose-500/20 rounded-none border-2 shrink-0">
-            <TrendingDown className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-          </div>
-        </div>
-
-        {/* Net / Transfer */}
-        <div className="bg-[oklch(0.98_0.01_250)] dark:bg-[oklch(0.18_0.02_250)] border-l-4 border-[oklch(0.6_0.05_250)] rounded-none p-6 flex items-center justify-between shadow-none">
-          <div>
-            <p className="text-slate-600 dark:text-slate-400 font-semibold text-sm mb-0.5">
-              Selisih (Net)
-            </p>
-            <h3 className={`text-2xl font-black leading-tight ${
-              totalIncome - totalExpense >= 0
-                ? 'text-emerald-600 dark:text-emerald-400'
-                : 'text-rose-600 dark:text-rose-400'
-            }`}>
-              {totalIncome - totalExpense >= 0 ? '+' : ''}{formatRupiah(totalIncome - totalExpense)}
-            </h3>
-            {totalTransfer > 0 && (
-              <p className="text-[10px] text-slate-400 mt-1">
-                Transfer: {formatRupiah(totalTransfer)}
-              </p>
-            )}
-          </div>
-          <div className="p-3 bg-slate-200 dark:bg-slate-600 rounded-none border-2 shrink-0">
-            <ArrowLeftRight className="w-6 h-6 text-slate-500 dark:text-slate-300" />
-          </div>
-        </div>
+      {/* ── SUMMARY STAT CARDS ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <MetricCard
+          label="Total Pemasukan"
+          value={formatRupiah(totalIncome)}
+          sub={hasActiveFilters ? `${summaryRows.filter(t => t.transaction_type === 'PEMASUKAN').length} transaksi` : undefined}
+          icon={TrendingUp}
+          variant="wealth"
+        />
+        <MetricCard
+          label="Total Pengeluaran"
+          value={formatRupiah(totalExpense)}
+          sub={hasActiveFilters ? `${summaryRows.filter(t => t.transaction_type === 'PENGELUARAN').length} transaksi` : undefined}
+          icon={TrendingDown}
+          variant="expense"
+        />
+        <MetricCard
+          label="Selisih (Net)"
+          value={`${net >= 0 ? '+' : ''}${formatCompact(net)}`}
+          formattedValue={`${net >= 0 ? '+' : ''}${formatRupiah(net)}`}
+          sub={totalTransfer > 0 ? `Transfer: ${formatRupiah(totalTransfer)}` : undefined}
+          icon={ArrowLeftRight}
+          variant={net >= 0 ? 'wealth' : 'expense'}
+        />
       </div>
 
-      {/* ── FILTER COMPONENT ───────────────────────────────────────────────────── */}
+      {/* ── FILTERS ────────────────────────────────────────────────────── */}
       <TransactionFilters categories={categories} wallets={wallets} />
 
-      {/* ── TRANSACTION LIST ───────────────────────────────────────────────────── */}
+      {/* ── TRANSACTION LIST ───────────────────────────────────────────── */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+        {/* List header */}
+        <div
+          className="flex items-center justify-between mb-3 px-1"
+        >
+          <h3 className="text-sm font-bold" style={{ color: 'var(--color-text-secondary)' }}>
             Data Transaksi
           </h3>
-          <span className="text-xs text-slate-400 dark:text-slate-500">
-            Halaman {safePage} / {totalPages}
-            {' '}·{' '}
+          <span className="text-xs font-medium" style={{ color: 'var(--color-text-disabled)' }}>
+            Halaman {safePage}/{totalPages}
+            {' · '}
             {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, totalCount)} dari {totalCount.toLocaleString('id-ID')}
           </span>
         </div>
 
         {hasActiveFilters && transactions.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl">
-            <FilterX className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-500 dark:text-slate-400 font-medium">
-              Berdasarkan filter saat ini,<br />Belum ada transaksi yang ditemukan.
-            </p>
-          </div>
+          <EmptyState
+            icon={FilterX}
+            title="Tidak ada hasil"
+            description="Tidak ada transaksi yang cocok dengan filter saat ini. Coba ubah atau reset filter."
+          />
+        ) : transactions.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="Belum ada transaksi"
+            description="Mulai catat pemasukan atau pengeluaranmu sekarang."
+            ctaLabel="+ Catat Transaksi"
+            ctaHref="#"
+          />
         ) : (
           <TransactionList transactions={transactions} />
         )}
 
-        {/* ── PAGINATION ─────────────────────────────────────────────────────── */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <PaginationBar currentPage={safePage} totalPages={totalPages} searchParams={searchParams} />
         )}
@@ -260,7 +226,7 @@ export default async function TransactionsPage(props: {
   );
 }
 
-// ─── Server-side pagination component ────────────────────────────────────────
+// ── Server-side pagination ─────────────────────────────────────────────────────
 function PaginationBar({
   currentPage,
   totalPages,
@@ -291,53 +257,58 @@ function PaginationBar({
     pages.push(totalPages);
   }
 
+  const linkStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '36px',
+    padding: '6px 12px',
+    borderRadius: '10px',
+    fontSize: '13px',
+    fontWeight: 700,
+    border: '1px solid var(--color-border)',
+    backgroundColor: 'var(--color-bg-surface)',
+    color: 'var(--color-text-secondary)',
+    transition: 'all 150ms',
+  } as React.CSSProperties;
+
+  const activeStyle = {
+    ...linkStyle,
+    backgroundColor: 'var(--color-brand-500)',
+    borderColor: 'transparent',
+    color: '#fff',
+    boxShadow: 'var(--shadow-brand)',
+  } as React.CSSProperties;
+
+  const disabledStyle = {
+    ...linkStyle,
+    backgroundColor: 'var(--color-bg-sunken)',
+    color: 'var(--color-text-disabled)',
+    cursor: 'not-allowed',
+  } as React.CSSProperties;
+
   return (
-    <div className="mt-6 flex items-center justify-center gap-1 flex-wrap">
-      {/* Prev */}
+    <div className="mt-6 flex items-center justify-center gap-1.5 flex-wrap">
       {currentPage > 1 ? (
-        <a
-          href={buildUrl(currentPage - 1)}
-          className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-400 hover:text-orange-500 transition-colors"
-        >
-          ← Prev
-        </a>
+        <Link href={buildUrl(currentPage - 1)} style={linkStyle}>← Prev</Link>
       ) : (
-        <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 cursor-not-allowed">
-          ← Prev
-        </span>
+        <span style={disabledStyle}>← Prev</span>
       )}
 
-      {/* Page numbers */}
       {pages.map((p, i) =>
         p === '…' ? (
-          <span key={`ellipsis-${i}`} className="px-2 text-slate-400">…</span>
+          <span key={`e-${i}`} className="px-1 text-sm" style={{ color: 'var(--color-text-disabled)' }}>…</span>
         ) : (
-          <a
-            key={p}
-            href={buildUrl(p as number)}
-            className={`min-w-[36px] text-center px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-              p === currentPage
-                ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30'
-                : 'text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-400 hover:text-orange-500'
-            }`}
-          >
+          <Link key={p} href={buildUrl(p as number)} style={p === currentPage ? activeStyle : linkStyle}>
             {p}
-          </a>
+          </Link>
         )
       )}
 
-      {/* Next */}
       {currentPage < totalPages ? (
-        <a
-          href={buildUrl(currentPage + 1)}
-          className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-orange-400 hover:text-orange-500 transition-colors"
-        >
-          Next →
-        </a>
+        <Link href={buildUrl(currentPage + 1)} style={linkStyle}>Next →</Link>
       ) : (
-        <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 cursor-not-allowed">
-          Next →
-        </span>
+        <span style={disabledStyle}>Next →</span>
       )}
     </div>
   );

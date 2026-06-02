@@ -1,45 +1,46 @@
 // app/(dashboard)/wallets/page.tsx
 import { Plus, CreditCard, Banknote, Smartphone, Wallet as WalletIcon } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import prisma from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import AddWalletModal from '@/components/AddWalletModal';
 import WalletCardActions from '@/components/WalletCardActions';
+import { EmptyState } from '@/components/shared/EmptyState';
 
-// ==========================================
-// HELPER FUNCTIONS
-// ==========================================
-const formatRupiah = (angka: number) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-};
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const formatRupiah = (n: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
 
-const getWalletIcon = (type: string) => {
+const formatCompact = (n: number) =>
+  new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+
+function WalletTypeIcon({ type, size = 24 }: { type: string; size?: number }) {
+  const props = { width: size, height: size };
   switch (type) {
-    case 'TUNAI': return <Banknote className="w-6 h-6" />;
-    case 'BANK': return <CreditCard className="w-6 h-6" />;
-    case 'DOMPET_DIGITAL': return <Smartphone className="w-6 h-6" />;
-    default: return <CreditCard className="w-6 h-6" />;
+    case 'TUNAI':        return <Banknote {...props} />;
+    case 'BANK':         return <CreditCard {...props} />;
+    case 'DOMPET_DIGITAL': return <Smartphone {...props} />;
+    default:             return <CreditCard {...props} />;
   }
+}
+
+// ── Type badge color mapping ─────────────────────────────────────────────────
+const TYPE_LABEL: Record<string, string> = {
+  TUNAI:          'Tunai',
+  BANK:           'Bank',
+  DOMPET_DIGITAL: 'E-Wallet',
 };
 
-// ==========================================
-// SERVER COMPONENT (Langsung tarik data DB!)
-// ==========================================
 export default async function WalletsPage() {
-  // 1. Autentikasi: Ambil sesi user yang lagi login
   const session = await auth();
-  if (!session?.user?.id) {
-    redirect('/login'); // Lempar ke login kalau belum masuk
-  }
+  if (!session?.user?.id) redirect('/login');
 
-  // 2. Fetch Data Asli! 
-  // Sparky pakai $queryRaw biar kita bisa Join tabel 'wallets' dengan View 'wallet_balances' buatanmu!
-  const walletsDataRaw = await prisma.$queryRaw<any[]>`
+  const walletsDataRaw = await prisma.$queryRaw<{
+    id: string; name: string; type: string; currency: string; balance: unknown;
+  }[]>`
     SELECT 
-      w.id, 
-      w.name, 
-      w.type, 
-      w.currency, 
+      w.id, w.name, w.type, w.currency,
       COALESCE(wb.balance, 0) as balance
     FROM wallets w
     LEFT JOIN wallet_balances wb ON w.id = wb.wallet_id
@@ -47,100 +48,171 @@ export default async function WalletsPage() {
     ORDER BY w.created_at ASC
   `;
   const walletsData = walletsDataRaw.map(w => ({ ...w, balance: Number(w.balance) }));
-
-  // 3. Kalkulasi Total
   const totalBalance = walletsData.reduce((acc, curr) => acc + curr.balance, 0);
 
   return (
-    <div className="space-y-6">
-      
-      {/* --- HEADER SECTION --- */}
+    <div className="space-y-5">
+
+      {/* ── HEADER ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Manajemen Kas & Dompet
+          <h1
+            className="font-display font-black tracking-tight"
+            style={{ fontSize: 'var(--text-3xl)', color: 'var(--color-text-primary)' }}
+          >
+            Kas &amp; Dompet
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="mt-1 text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             Pantau semua aliran uang fiat kamu di satu tempat.
           </p>
         </div>
-        
-        {/* Tombol ini nanti kita fungsikan buat buka Modal Tambah Dompet */}
         <AddWalletModal />
       </div>
 
-      {/* --- STATISTIC CARD --- */}
-      <div className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-4 -translate-y-4 group-hover:scale-110 group-hover:rotate-12 transition-transform duration-700">
-          <Banknote className="w-32 h-32" />
+      {/* ── HERO BALANCE CARD ──────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden rounded-xl p-7 sm:p-10 text-white"
+        style={{
+          background: `
+            radial-gradient(ellipse 70% 80% at 90% -20%, oklch(0.70 0.185 47 / 0.4), transparent),
+            radial-gradient(ellipse 40% 60% at 0% 100%, oklch(0.64 0.185 152 / 0.2), transparent),
+            oklch(0.155 0.025 250)
+          `,
+        }}
+      >
+        {/* Dot texture */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px)',
+            backgroundSize: '22px 22px',
+          }}
+        />
+        {/* Large decorative icon */}
+        <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none" style={{ opacity: 0.04 }}>
+          <Banknote width={180} height={180} />
         </div>
-        <div className="relative z-10">
-          <p className="text-slate-300 font-medium mb-1">Total Kekayaan Tunai (IDR)</p>
-          <h2 className="text-4xl sm:text-5xl font-black tracking-tight drop-shadow-md">
-            {formatRupiah(totalBalance)}
-          </h2>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] mb-2" style={{ color: 'oklch(0.75 0.05 55)' }}>
+              Total Kekayaan Tunai (IDR)
+            </p>
+            <p
+              className="font-display font-black tracking-tight leading-none"
+              style={{ fontSize: 'clamp(1.75rem, 4vw + 1rem, 3.5rem)' }}
+            >
+              {formatRupiah(totalBalance)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ backgroundColor: 'oklch(1 0 0 / 0.08)' }}>
+            <TrendingUp width={16} height={16} style={{ color: 'oklch(0.75 0.18 152)' }} />
+            <span className="text-sm font-bold" style={{ color: 'oklch(0.85 0.06 55)' }}>
+              {walletsData.length} Dompet Aktif
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* --- WALLET GRID SECTION --- */}
+      {/* ── WALLET GRID ────────────────────────────────────────────────── */}
       <div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Daftar Dompet Aktif</h3>
-        
-        {/* STATE KETIKA KOSONG (Belum ada dompet di DB) */}
+        <h2
+          className="font-display font-bold mb-4"
+          style={{ fontSize: 'var(--text-lg)', color: 'var(--color-text-primary)' }}
+        >
+          Daftar Dompet
+        </h2>
+
         {walletsData.length === 0 ? (
-          <div className="bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
-            <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full mb-4">
-              <WalletIcon className="w-8 h-8 text-slate-400 dark:text-slate-500" />
-            </div>
-            <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Belum Ada Dompet</h4>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">
-              Mulai perjalanan finansialmu dengan menambahkan dompet pertamamu sekarang!
-            </p>
-            <button className="flex items-center justify-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-xl font-semibold hover:scale-105 transition-all duration-300">
-              <Plus className="w-5 h-5" />
-              Tambah Dompet Pertama
-            </button>
-          </div>
+          <EmptyState
+            icon={WalletIcon}
+            title="Belum Ada Dompet"
+            description="Mulai perjalanan finansialmu dengan menambahkan dompet pertamamu sekarang!"
+            ctaLabel="+ Tambah Dompet"
+            ctaHref="#"
+          />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {walletsData.map((wallet) => (
-              <div 
-                key={wallet.id} 
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 hover:border-orange-300 dark:hover:border-orange-500/50 transition-all duration-300 group relative overflow-hidden flex flex-col justify-between min-h-[160px]"
+              <div
+                key={wallet.id}
+                className="card relative overflow-hidden flex flex-col justify-between p-5 min-h-[160px] group"
               >
-                {/* Dekorasi Garis Atas */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 group-hover:from-orange-400 group-hover:to-orange-600 transition-all duration-300"></div>
-                
-                {/* INI DIA KOMPONEN 3 ICON MUNGILNYA! */}
+                {/* Top accent bar — brand gradient on hover via CSS group trick */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-0.5"
+                  style={{ background: 'linear-gradient(90deg, var(--color-brand-400), var(--color-brand-600))' }}
+                />
+
+                {/* 3-dot actions */}
                 <WalletCardActions wallet={wallet} />
 
-                {/* Bagian Atas: Icon & Badge */}
-                <div className="flex flex-col items-start gap-3 mb-4">
-                  <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl text-slate-700 dark:text-slate-300 group-hover:bg-orange-50 group-hover:text-orange-600 dark:group-hover:bg-orange-500/10 dark:group-hover:text-orange-400 transition-colors">
-                    {getWalletIcon(wallet.type)}
+                {/* Icon + type badge */}
+                <div className="flex flex-col items-start gap-2.5 mb-4">
+                  <div
+                    className="p-3 rounded-xl"
+                    style={{
+                      backgroundColor: 'var(--color-brand-surface)',
+                      color: 'var(--color-brand-600)',
+                    }}
+                  >
+                    <WalletTypeIcon type={wallet.type} size={20} />
                   </div>
-                  <div className="flex gap-2">
-                    <span className="text-[10px] font-extrabold px-2.5 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-lg tracking-wider">
-                      {wallet.type}
+                  <div className="flex gap-1.5 flex-wrap">
+                    <span
+                      className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider"
+                      style={{
+                        backgroundColor: 'var(--color-bg-sunken)',
+                        color: 'var(--color-text-tertiary)',
+                      }}
+                    >
+                      {TYPE_LABEL[wallet.type] ?? wallet.type}
                     </span>
-                    <span className="text-[10px] font-extrabold px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg tracking-wider">
+                    <span
+                      className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider"
+                      style={{
+                        backgroundColor: 'var(--color-wealth-surface)',
+                        color: 'var(--color-wealth-600)',
+                      }}
+                    >
                       {wallet.currency}
                     </span>
                   </div>
                 </div>
-                
-                {/* Bagian Bawah: Nama & Saldo */}
+
+                {/* Name + Balance */}
                 <div className="mt-auto pt-2">
-                  <h4 className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-1 truncate">
+                  <p className="text-xs font-semibold mb-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>
                     {wallet.name}
-                  </h4>
-                  <p className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                    {formatRupiah(Number(wallet.balance))}
+                  </p>
+                  <p
+                    className="font-black tracking-tight nums"
+                    style={{ fontSize: 'clamp(1.2rem, 2vw + 0.8rem, 1.6rem)', color: 'var(--color-text-primary)' }}
+                  >
+                    {formatCompact(wallet.balance)}
+                  </p>
+                  <p className="text-xs mt-0.5 nums" style={{ color: 'var(--color-text-disabled)' }}>
+                    {formatRupiah(wallet.balance)}
                   </p>
                 </div>
-
               </div>
             ))}
+
+            {/* Add wallet shortcut card */}
+            <div
+              className="flex flex-col items-center justify-center gap-3 rounded-xl p-5 min-h-[160px] border-2 border-dashed transition-colors"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-sunken)' }}
+            >
+              <div
+                className="p-3 rounded-xl"
+                style={{ backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-disabled)' }}
+              >
+                <Plus width={20} height={20} />
+              </div>
+              <p className="text-sm font-bold" style={{ color: 'var(--color-text-disabled)' }}>
+                Tambah Dompet
+              </p>
+            </div>
           </div>
         )}
       </div>

@@ -2,94 +2,128 @@ import { auth } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowUpRight, ArrowDownRight, Wallet, Rocket, 
-  TrendingUp, TrendingDown, Clock, Plus, ArrowRight, PieChart
+import {
+  ArrowUpRight, ArrowDownRight, Wallet, Rocket,
+  TrendingUp, TrendingDown, Clock, Plus, ArrowRight,
+  PieChart as PieIcon,
 } from 'lucide-react';
-import { Prisma } from '@prisma/client';
 import DashboardCharts from '@/components/DashboardCharts';
 import LiveNetWorth from '@/components/LiveNetWorth';
 
-const formatRupiah = (angka: number) => {
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-};
+// ── Formatters ────────────────────────────────────────────────────────────────
+const fmtRupiah = (n: number) =>
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency: 'IDR', minimumFractionDigits: 0,
+  }).format(n);
 
+const fmtCompact = (n: number) =>
+  new Intl.NumberFormat('id-ID', {
+    notation: 'compact', maximumFractionDigits: 1,
+  }).format(n);
+
+const namaBulan = () =>
+  new Date().toLocaleDateString('id-ID', { month: 'long' });
+
+// ── Relative date helper ──────────────────────────────────────────────────────
+function relativeDate(date: Date | null | undefined): string {
+  if (!date) return '';
+  const now  = new Date();
+  const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (diff < 60)     return 'Baru saja';
+  if (diff < 3600)   return `${Math.floor(diff / 60)} menit lalu`;
+  if (diff < 86400)  return `${Math.floor(diff / 3600)} jam lalu`;
+  if (diff < 172800) return 'Kemarin';
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PAGE COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════════
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
   const userId = session.user.id;
 
-  const now = new Date();
+  const now             = new Date();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  const lastDayOfMonth  = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-  // Run independent database queries concurrently to avoid waterfall
-  const [
-    walletsDataRaw,
-    portfolios,
-    monthlyTransactions,
-    recentTransactions
-  ] = await Promise.all([
-    // 1. Fetch Total Wallet (Cash) Balance
-    prisma.$queryRaw<any[]>`
-      SELECT COALESCE(SUM(wb.balance), 0) as total_balance
+  // All queries in parallel — no waterfall
+  const [walletsRaw, portfolios, monthlyTxs, recentTxs] = await Promise.all([
+    prisma.$queryRaw<{ total_balance: unknown }[]>`
+      SELECT COALESCE(SUM(wb.balance), 0) AS total_balance
       FROM wallets w
       LEFT JOIN wallet_balances wb ON w.id = wb.wallet_id
       WHERE w.user_id = ${userId}::uuid AND w.deleted_at IS NULL
     `,
-    // 2. Fetch Total Investment Portfolio Balance
-    prisma.user_portfolios.findMany({
-      where: { user_id: userId }
-    }),
-    // 3. Fetch Monthly Cashflow (Fiat Transactions)
+    prisma.user_portfolios.findMany({ where: { user_id: userId } }),
     prisma.fiat_transactions.findMany({
       where: {
         user_id: userId,
         transaction_date: { gte: firstDayOfMonth, lte: lastDayOfMonth },
-      }
+      },
     }),
-    // 4. Fetch 5 Recent Transactions
     prisma.fiat_transactions.findMany({
       where: { user_id: userId },
       orderBy: { transaction_date: 'desc' },
-      take: 5,
+      take: 6,
       include: {
         categories: true,
-        wallets_fiat_transactions_wallet_idTowallets: true
-      }
-    })
+        wallets_fiat_transactions_wallet_idTowallets: true,
+      },
+    }),
   ]);
 
-  const totalCash = Number(walletsDataRaw[0]?.total_balance || 0);
-
-  const totalInvestment = portfolios.reduce((acc, port) => {
-    const units = Number(port.total_units || 0);
-    const avgPrice = Number(port.average_buy_price || 0);
-    return acc + (units * avgPrice);
-  }, 0);
+  const totalCash = Number(walletsRaw[0]?.total_balance || 0);
+  const totalInvestment = portfolios.reduce((acc, p) =>
+    acc + Number(p.total_units || 0) * Number(p.average_buy_price || 0), 0);
 
   let monthlyIncome = 0;
   let monthlyExpense = 0;
-
-  monthlyTransactions.forEach(tx => {
-    const amount = Number(tx.amount || 0);
-    if (tx.transaction_type === 'PEMASUKAN') monthlyIncome += amount;
-    if (tx.transaction_type === 'PENGELUARAN') monthlyExpense += amount;
+  monthlyTxs.forEach(tx => {
+    const a = Number(tx.amount || 0);
+    if (tx.transaction_type === 'PEMASUKAN')   monthlyIncome  += a;
+    if (tx.transaction_type === 'PENGELUARAN') monthlyExpense += a;
   });
 
-  // Calculate Net Worth
   const netWorth = totalCash + totalInvestment;
+  const cashflow = monthlyIncome - monthlyExpense;
+  const currentMonth = namaBulan();
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
-      
-      {/* 1. HERO SECTION: NET WORTH — brand-specific, no AI gradient */}
-      <div className="rounded-none p-8 sm:p-12 text-white border-b-4 border-[oklch(0.65_0.2_35)] shadow-none relative overflow-hidden" style={{ backgroundColor: 'oklch(0.18 0.06 50)' }}>
-        {/* Warm glow: brand orange, bukan indigo */}
-        <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-20" style={{ background: 'radial-gradient(circle, oklch(0.72 0.18 55), transparent)' }}></div>
-        <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, oklch(0.85 0.12 80), transparent)' }}></div>
-        
-        <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-6">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationTimingFunction: 'var(--ease-out-expo)' }}>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          1. HERO — Net Worth
+          Layered: base dark → radial glow → noise grain → content
+      ════════════════════════════════════════════════════════════════════ */}
+      <div
+        className="relative overflow-hidden rounded-xl p-7 sm:p-10"
+        style={{
+          background: `
+            radial-gradient(ellipse 80% 80% at 80% -10%, oklch(0.70 0.185 47 / 0.35), transparent),
+            radial-gradient(ellipse 50% 60% at -10% 80%, oklch(0.64 0.185 152 / 0.20), transparent),
+            oklch(0.155 0.025 250)
+          `,
+        }}
+      >
+        {/* Subtle grid texture overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(oklch(1 0 0 / 0.03) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+
+        {/* Top accent line */}
+        <div
+          className="absolute top-0 left-0 right-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, oklch(0.70 0.185 47 / 0.6), transparent)' }}
+        />
+
+        <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-7">
+          {/* Net Worth display */}
           <div className="flex-1 min-w-0">
             <LiveNetWorth
               initialCash={totalCash}
@@ -98,140 +132,282 @@ export default async function DashboardPage() {
               show="total"
             />
           </div>
-          
+
+          {/* CTA buttons */}
           <div className="flex gap-3 shrink-0 flex-wrap">
-            <Link href="/transactions" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 border border-white/10 shadow-lg shadow-black/20">
+            <Link
+              href="/transactions"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white backdrop-blur-sm transition-all duration-200 border"
+              style={{
+                backgroundColor: 'oklch(1 0 0 / 0.08)',
+                borderColor: 'oklch(1 0 0 / 0.15)',
+              }}
+              onMouseEnter={undefined}
+            >
               <Plus className="w-4 h-4" /> Catat Kas
             </Link>
-            <Link href="/portfolios/transactions" className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:scale-105 shadow-lg shadow-orange-500/30">
+            <Link
+              href="/portfolios/transactions"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200"
+              style={{
+                backgroundColor: 'var(--color-brand-500)',
+                boxShadow: '0 4px 20px oklch(0.70 0.185 47 / 0.4)',
+              }}
+            >
               <Plus className="w-4 h-4" /> Investasi
             </Link>
           </div>
         </div>
       </div>
 
-      {/* 2. MAIN METRICS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        
-        {/* Kas Card */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-xl text-slate-600 dark:text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500 transition-colors">
-              <Wallet className="w-5 h-5" />
+      {/* ════════════════════════════════════════════════════════════════════
+          2. METRIC CARDS — 4-column grid
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
+        {/* Tunai & Bank */}
+        <div className="metric-card p-5 group">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div
+              className="p-2 rounded-lg transition-colors duration-200"
+              style={{ backgroundColor: 'var(--color-wealth-surface)', color: 'var(--color-wealth-600)' }}
+            >
+              <Wallet style={{ width: '1rem', height: '1rem' }} />
             </div>
-            <h3 className="font-bold text-slate-600 dark:text-slate-400 text-sm">Tunai & Bank</h3>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+              Tunai & Bank
+            </p>
           </div>
           <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="cash" />
+          <p className="mt-2.5 text-xs font-medium flex items-center gap-1" style={{ color: 'var(--color-wealth-500)' }}>
+            <TrendingUp style={{ width: '0.75rem', height: '0.75rem' }} />
+            Saldo aktif
+          </p>
         </div>
 
-        {/* Investasi Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group">
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Nilai Portofolio</p>
+        {/* Nilai Portofolio */}
+        <div className="metric-card p-5 group">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div
+              className="p-2 rounded-lg transition-colors duration-200"
+              style={{ backgroundColor: 'var(--color-invest-surface)', color: 'var(--color-invest-600)' }}
+            >
+              <Rocket style={{ width: '1rem', height: '1rem' }} />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+              Portofolio
+            </p>
+          </div>
           <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
-          <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400">
-            <Rocket className="w-3.5 h-3.5 text-indigo-500" />
-            <span>Estimasi nilai beli</span>
-          </div>
+          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-disabled)' }}>
+            Estimasi nilai beli
+          </p>
         </div>
 
-        {/* Pemasukan Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest mb-2">Pemasukan Bulan Ini</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {formatRupiah(monthlyIncome)}
-          </p>
-          <div className="flex items-center gap-1.5 mt-3 text-xs text-emerald-600 dark:text-emerald-500">
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Bulan {new Date().toLocaleDateString('id-ID', { month: 'long' })}</span>
+        {/* Pemasukan */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: 'var(--color-wealth-surface)', color: 'var(--color-wealth-600)' }}
+            >
+              <TrendingUp style={{ width: '1rem', height: '1rem' }} />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-wealth-600)' }}>
+              Pemasukan
+            </p>
           </div>
+          <p className="font-black tracking-tight nums" style={{ fontSize: 'var(--text-2xl)', color: 'var(--color-text-primary)' }}>
+            {fmtRupiah(monthlyIncome)}
+          </p>
+          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+            {currentMonth}
+          </p>
         </div>
 
-        {/* Pengeluaran Card */}
-        <div className="metric-card bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-6 border-b-4 border-transparent hover:border-[oklch(0.65_0.2_35)] hover:bg-white shadow-[2px_2px_0px_oklch(0.9_0.02_250)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-500 uppercase tracking-widest mb-2">Pengeluaran Bulan Ini</p>
-          <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {formatRupiah(monthlyExpense)}
-          </p>
-          <div className="flex items-center gap-1.5 mt-3 text-xs text-rose-600 dark:text-rose-500">
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>Bulan {new Date().toLocaleDateString('id-ID', { month: 'long' })}</span>
+        {/* Pengeluaran */}
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div
+              className="p-2 rounded-lg"
+              style={{ backgroundColor: 'var(--color-expense-surface)', color: 'var(--color-expense-600)' }}
+            >
+              <TrendingDown style={{ width: '1rem', height: '1rem' }} />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-expense-600)' }}>
+              Pengeluaran
+            </p>
           </div>
+          <p className="font-black tracking-tight nums" style={{ fontSize: 'var(--text-2xl)', color: 'var(--color-text-primary)' }}>
+            {fmtRupiah(monthlyExpense)}
+          </p>
+          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+            {currentMonth}
+          </p>
         </div>
 
       </div>
 
-      {/* 3. CHARTS DATA VISUALIZATION */}
-      <DashboardCharts 
-        income={monthlyIncome} 
-        expense={monthlyExpense} 
-        cash={totalCash} 
-        investments={totalInvestment} 
+      {/* ════════════════════════════════════════════════════════════════════
+          3. CHARTS
+      ════════════════════════════════════════════════════════════════════ */}
+      <DashboardCharts
+        income={monthlyIncome}
+        expense={monthlyExpense}
+        cash={totalCash}
+        investments={totalInvestment}
       />
 
-      {/* 4. RECENT TRANSACTIONS & QUICK INFO */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Left Col: Recent Transactions */}
-        <div className="lg:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-8 border-b-4 border-[oklch(0.65_0.2_35)] shadow-none">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Clock className="w-5 h-5 text-slate-400" /> Transaksi Terakhir
+      {/* ════════════════════════════════════════════════════════════════════
+          4. BOTTOM GRID — Recent Transactions + Wealth Distribution
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+        {/* ── Recent Transactions (2/3 width) ─────────────────────────── */}
+        <div
+          className="lg:col-span-2 rounded-xl p-5 sm:p-6"
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5">
+            <h2
+              className="font-display font-bold flex items-center gap-2"
+              style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}
+            >
+              <span
+                className="p-1.5 rounded-lg"
+                style={{ backgroundColor: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }}
+              >
+                <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
+              </span>
+              Transaksi Terakhir
             </h2>
-            <Link href="/transactions" className="text-sm font-bold text-orange-500 dark:text-orange-400 hover:text-orange-600 flex items-center gap-1 group">
-              Lihat Semua <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            <Link
+              href="/transactions"
+              className="text-xs font-bold flex items-center gap-1 transition-colors duration-150 group"
+              style={{ color: 'var(--color-brand-500)' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-brand-600)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-brand-500)' }}
+            >
+              Lihat Semua
+              <ArrowRight
+                style={{ width: '0.875rem', height: '0.875rem', transition: 'transform 150ms var(--ease-spring)' }}
+                className="group-hover:translate-x-0.5"
+              />
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {recentTransactions.length === 0 ? (
-              <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                <p className="text-slate-500 font-medium">Belum ada transaksi bulan ini.</p>
+          {/* List */}
+          <div className="space-y-1">
+            {recentTxs.length === 0 ? (
+              // Empty state
+              <div
+                className="py-12 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed"
+                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-disabled)' }}
+              >
+                <Clock style={{ width: '2rem', height: '2rem', opacity: 0.4 }} />
+                <div className="text-center">
+                  <p className="text-sm font-semibold">Belum ada transaksi</p>
+                  <p className="text-xs mt-1">Mulai catat pemasukan atau pengeluaranmu</p>
+                </div>
+                <Link
+                  href="/transactions"
+                  className="mt-1 px-4 py-2 rounded-lg text-xs font-bold text-white"
+                  style={{ backgroundColor: 'var(--color-brand-500)' }}
+                >
+                  Catat Sekarang
+                </Link>
               </div>
             ) : (
-              recentTransactions.map((tx) => {
+              recentTxs.map((tx) => {
                 const isPemasukan = tx.transaction_type === 'PEMASUKAN';
-                const isTransfer = tx.transaction_type === 'TRANSFER';
-                
+                const isTransfer  = tx.transaction_type === 'TRANSFER';
+                const amount      = Number(tx.amount || 0);
+
                 return (
-                  <div key={tx.id} className="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 rounded-xl transition-colors group border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2.5 rounded-xl shadow-sm ${
-                        isPemasukan ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' :
-                        isTransfer ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400' :
-                        'bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400'
-                      }`}>
-                        {isPemasukan ? <ArrowDownRight className="w-5 h-5" /> : 
-                         isTransfer ? <ArrowRight className="w-5 h-5" /> :
-                         <ArrowUpRight className="w-5 h-5" />}
+                  <div
+                    key={tx.id}
+                    className="flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-150 group"
+                    style={{ borderWidth: '1px', borderColor: 'transparent' }}
+                    onMouseEnter={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.backgroundColor = 'var(--color-bg-sunken)';
+                      el.style.borderColor = 'var(--color-border-subtle)';
+                    }}
+                    onMouseLeave={e => {
+                      const el = e.currentTarget as HTMLElement;
+                      el.style.backgroundColor = '';
+                      el.style.borderColor = 'transparent';
+                    }}
+                  >
+                    {/* Left: icon + info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Type icon */}
+                      <div
+                        className="p-2 rounded-xl shrink-0"
+                        style={{
+                          backgroundColor: isPemasukan
+                            ? 'var(--color-wealth-surface)'
+                            : isTransfer
+                            ? 'var(--color-invest-surface)'
+                            : 'var(--color-expense-surface)',
+                          color: isPemasukan
+                            ? 'var(--color-wealth-600)'
+                            : isTransfer
+                            ? 'var(--color-invest-600)'
+                            : 'var(--color-expense-600)',
+                        }}
+                      >
+                        {isPemasukan
+                          ? <ArrowDownRight style={{ width: '1rem', height: '1rem' }} />
+                          : isTransfer
+                          ? <ArrowRight style={{ width: '1rem', height: '1rem' }} />
+                          : <ArrowUpRight style={{ width: '1rem', height: '1rem' }} />
+                        }
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white group-hover:text-orange-500 dark:group-hover:text-orange-400 transition-colors">
+
+                      {/* Text */}
+                      <div className="min-w-0">
+                        <p
+                          className="text-sm font-semibold truncate transition-colors duration-150"
+                          style={{ color: 'var(--color-text-primary)' }}
+                        >
                           {tx.categories?.name || 'Lainnya'}
-                        </h4>
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                          <span className="bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold text-slate-600 dark:text-slate-300">
-                             {tx.wallets_fiat_transactions_wallet_idTowallets.name}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          <span
+                            className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                            style={{
+                              backgroundColor: 'var(--color-bg-sunken)',
+                              color: 'var(--color-text-tertiary)',
+                            }}
+                          >
+                            {tx.wallets_fiat_transactions_wallet_idTowallets.name}
                           </span>
-                          <span>•</span>
-                          <span>{tx.transaction_date?.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
-                          {tx.description && (
-                            <>
-                              <span>•</span>
-                              <span className="truncate max-w-[120px]">{tx.description}</span>
-                            </>
-                          )}
+                          <span style={{ color: 'var(--color-text-disabled)', fontSize: '10px' }}>·</span>
+                          <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                            {relativeDate(tx.transaction_date)}
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right pl-4">
-                      <p className={`font-black tracking-tight ${
-                        isPemasukan ? 'text-emerald-600 dark:text-emerald-400' : 
-                        isTransfer ? 'text-slate-900 dark:text-white' : 
-                        'text-slate-900 dark:text-white'
-                      }`}>
-                        {isPemasukan ? '+' : isTransfer ? '' : '-'}Rp {new Intl.NumberFormat('id-ID').format(Number(tx.amount))}
-                      </p>
-                    </div>
+
+                    {/* Right: amount */}
+                    <p
+                      className="text-sm font-black nums shrink-0 pl-3"
+                      style={{
+                        color: isPemasukan
+                          ? 'var(--color-wealth-500)'
+                          : 'var(--color-text-primary)',
+                      }}
+                    >
+                      {isPemasukan ? '+' : isTransfer ? '' : '−'}
+                      {fmtRupiah(amount)}
+                    </p>
                   </div>
                 );
               })
@@ -239,64 +415,140 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Right Col: Distribusi Kekayaan */}
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-none p-8 border-b-4 border-[oklch(0.65_0.2_35)] shadow-none flex flex-col justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 mb-6">
-              <span className="p-1.5 bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-lg">
-                <PieChart className="w-4 h-4" />
-              </span>
-              Distribusi Kekayaan
-            </h2>
+        {/* ── Wealth Distribution (1/3 width) ─────────────────────────── */}
+        <div
+          className="rounded-xl p-5 sm:p-6 flex flex-col"
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <h2
+            className="font-display font-bold flex items-center gap-2 mb-5"
+            style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}
+          >
+            <span
+              className="p-1.5 rounded-lg"
+              style={{ backgroundColor: 'var(--color-brand-surface)', color: 'var(--color-brand-600)' }}
+            >
+              <PieIcon style={{ width: '0.875rem', height: '0.875rem' }} />
+            </span>
+            Distribusi
+          </h2>
 
-            {netWorth === 0 ? (
-              <div className="h-40 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl relative overflow-hidden group">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest relative z-10 group-hover:scale-105 transition-transform duration-300">Net Worth Nol</p>
-                <div className="absolute inset-0 bg-slate-50 dark:bg-slate-900/50 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 transition-colors"></div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Visual Bar */}
-                <div className="w-full h-4 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800">
-                  <div 
-                    title={`Kas: Rp ${new Intl.NumberFormat('id-ID').format(totalCash)}`}
-                    className="h-full bg-emerald-500 hover:bg-emerald-400 transition-all hover:brightness-110 cursor-help relative group"
-                    style={{ width: `${(totalCash / netWorth) * 100}%` }}
-                  ></div>
-                  <div 
-                    title={`Investasi: Rp ${new Intl.NumberFormat('id-ID').format(totalInvestment)}`}
-                    className="h-full bg-orange-500 hover:bg-orange-400 transition-all hover:brightness-110 cursor-help relative group"
-                    style={{ width: `${(totalInvestment / netWorth) * 100}%` }}
-                  ></div>
+          {netWorth === 0 ? (
+            // Empty state
+            <div
+              className="flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-disabled)', minHeight: '140px' }}
+            >
+              <p className="text-sm font-semibold">Belum ada kekayaan</p>
+              <p className="text-xs">Tambah saldo untuk mulai</p>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col gap-5">
+              {/* Segmented bar */}
+              <div>
+                <div
+                  className="w-full h-3 rounded-full overflow-hidden flex gap-0.5"
+                  style={{ backgroundColor: 'var(--color-bg-sunken)' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${(totalCash / netWorth) * 100}%`,
+                      backgroundColor: 'var(--color-wealth-500)',
+                      transitionTimingFunction: 'var(--ease-out-expo)',
+                    }}
+                    title={`Kas: ${fmtRupiah(totalCash)}`}
+                  />
+                  <div
+                    className="h-full rounded-full flex-1 transition-all duration-700"
+                    style={{
+                      backgroundColor: 'var(--color-brand-500)',
+                      transitionTimingFunction: 'var(--ease-out-expo)',
+                    }}
+                    title={`Investasi: ${fmtRupiah(totalInvestment)}`}
+                  />
                 </div>
-
-                {/* Legend */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-emerald-200 dark:hover:border-emerald-900 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Kas Bebas</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">
-                      {((totalCash / netWorth) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-orange-200 dark:hover:border-orange-900 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Investasi</span>
-                    </div>
-                    <span className="text-sm font-bold text-slate-900 dark:text-white">
-                      {((totalInvestment / netWorth) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
               </div>
-            )}
-          </div>
 
-          <Link href="/goals" className="mt-8 w-full block text-center bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-3 px-4 rounded-xl transition-colors border border-slate-200 dark:border-slate-700 text-sm">
-            Atur Target Impian
+              {/* Breakdown rows */}
+              <div className="space-y-2.5">
+                {[
+                  { label: 'Kas Bebas', value: totalCash, pct: (totalCash / netWorth) * 100, color: 'var(--color-wealth-500)', surface: 'var(--color-wealth-surface)', textColor: 'var(--color-wealth-700)' },
+                  { label: 'Investasi', value: totalInvestment, pct: (totalInvestment / netWorth) * 100, color: 'var(--color-brand-500)', surface: 'var(--color-brand-surface)', textColor: 'var(--color-brand-700)' },
+                ].map(item => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between p-3 rounded-xl transition-colors duration-150"
+                    style={{ backgroundColor: 'var(--color-bg-sunken)', border: '1px solid var(--color-border-subtle)' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = item.color }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-subtle)' }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black nums" style={{ color: 'var(--color-text-primary)' }}>
+                        {item.pct.toFixed(1)}%
+                      </span>
+                      <p className="text-[10px]" style={{ color: 'var(--color-text-disabled)' }}>
+                        {fmtCompact(item.value)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Cashflow summary */}
+              <div
+                className="mt-auto p-3 rounded-xl"
+                style={{ backgroundColor: cashflow >= 0 ? 'var(--color-wealth-surface)' : 'var(--color-expense-surface)' }}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
+                  Selisih {currentMonth}
+                </p>
+                <p
+                  className="text-base font-black nums mt-0.5"
+                  style={{ color: cashflow >= 0 ? 'var(--color-wealth-600)' : 'var(--color-expense-600)' }}
+                >
+                  {cashflow >= 0 ? '+' : ''}{fmtRupiah(cashflow)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* CTA */}
+          <Link
+            href="/goals"
+            className="mt-4 w-full text-center py-2.5 rounded-xl text-sm font-bold transition-all duration-150"
+            style={{
+              backgroundColor: 'var(--color-bg-sunken)',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-secondary)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.backgroundColor = 'var(--color-brand-surface)';
+              el.style.color = 'var(--color-brand-600)';
+              el.style.borderColor = 'var(--color-brand-300)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.backgroundColor = 'var(--color-bg-sunken)';
+              el.style.color = 'var(--color-text-secondary)';
+              el.style.borderColor = 'var(--color-border)';
+            }}
+          >
+            Atur Target Impian →
           </Link>
         </div>
 

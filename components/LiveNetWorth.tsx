@@ -2,20 +2,23 @@
 
 import { useLivePrices } from '@/lib/useLivePrices';
 import { useEffect, useState, useRef } from 'react';
-import { Activity } from 'lucide-react';
+import { Activity, TrendingUp, TrendingDown } from 'lucide-react';
+import { useGSAP } from '@gsap/react';
+import { gsap } from 'gsap';
 
+// ── Format helpers ────────────────────────────────────────────────────────────
 const formatRupiah = (v: number) =>
-  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v);
+  new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(v);
 
 interface LiveNetWorthProps {
-  /** Initial SSR value for instant render */
   initialCash: number;
   initialInvestment: number;
-  /** small = metric card, large = hero section */
   variant?: 'hero' | 'card';
-  /** Custom label */
   label?: string;
-  /** Show only investment or only cash or total */
   show?: 'total' | 'cash' | 'investment';
 }
 
@@ -26,83 +29,160 @@ export default function LiveNetWorth({
   label,
   show = 'total',
 }: LiveNetWorthProps) {
-  const { netWorth, isLoading, isValidating, updatedAt } = useLivePrices();
+  const { netWorth, isValidating, updatedAt } = useLivePrices();
   const [flashClass, setFlashClass] = useState('');
   const prevValueRef = useRef<number>(0);
+  const amountRef    = useRef<HTMLElement>(null);
+  const hasAnimated  = useRef(false);
 
-  // Determine which value to display
-  const cash = netWorth.cash || initialCash;
-  const investment = netWorth.investment || initialInvestment;
+  const cash        = netWorth.cash       || initialCash;
+  const investment  = netWorth.investment || initialInvestment;
   const displayValue =
-    show === 'cash' ? cash :
+    show === 'cash'       ? cash :
     show === 'investment' ? investment :
     cash + investment;
 
-  // Flash animation on value change
+  // ── Counter animation on first mount ─────────────────────────────────────
+  useGSAP(() => {
+    if (hasAnimated.current || !amountRef.current) return;
+    hasAnimated.current = true;
+
+    const el = amountRef.current as HTMLElement;
+    const target = displayValue;
+
+    // Start from 0 and count up to target
+    const obj = { val: 0 };
+    gsap.to(obj, {
+      val: target,
+      duration: variant === 'hero' ? 1.4 : 0.9,
+      ease: 'power3.out',
+      onUpdate: () => {
+        el.textContent = formatRupiah(Math.round(obj.val));
+      },
+    });
+  }, { dependencies: [], scope: amountRef });
+
+  // ── Flash on live price change ─────────────────────────────────────────────
   useEffect(() => {
     if (prevValueRef.current === 0) {
       prevValueRef.current = displayValue;
       return;
     }
-
-    if (displayValue > prevValueRef.current) {
-      setFlashClass('price-flash-up');
-    } else if (displayValue < prevValueRef.current) {
-      setFlashClass('price-flash-down');
-    }
+    if (displayValue > prevValueRef.current) setFlashClass('price-flash-up');
+    else if (displayValue < prevValueRef.current) setFlashClass('price-flash-down');
 
     prevValueRef.current = displayValue;
-
-    const timer = setTimeout(() => setFlashClass(''), 1500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setFlashClass(''), 1500);
+    return () => clearTimeout(t);
   }, [displayValue]);
 
   const defaultLabel =
-    show === 'cash' ? 'Tunai & Bank' :
+    show === 'cash'       ? 'Tunai & Bank' :
     show === 'investment' ? 'Nilai Portofolio' :
     'Total Kekayaan Bersih';
 
+  // ── CARD VARIANT ─────────────────────────────────────────────────────────
   if (variant === 'card') {
     return (
       <div className="relative">
-        <p className={`text-2xl font-black text-slate-900 dark:text-white tracking-tight transition-colors duration-500 ${flashClass}`}>
+        <span
+          ref={amountRef as React.RefObject<HTMLSpanElement>}
+          className={`nums font-black tracking-tight transition-colors duration-500 ${flashClass}`}
+          style={{
+            fontSize: 'var(--text-2xl)',
+            color: 'var(--color-text-primary)',
+          }}
+        >
           {formatRupiah(displayValue)}
-        </p>
+        </span>
         {isValidating && (
-          <Activity className="w-3 h-3 text-indigo-500 animate-pulse absolute -right-1 -top-1" />
+          <Activity
+            className="animate-pulse absolute -right-1 -top-1"
+            style={{ width: '0.75rem', height: '0.75rem', color: 'var(--color-brand-500)' }}
+          />
         )}
       </div>
     );
   }
 
-  // Hero variant
+  // ── HERO VARIANT ─────────────────────────────────────────────────────────
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-[0.2em] mb-3 flex items-center gap-2" style={{ color: 'oklch(0.85 0.06 55)' }}>
+      {/* Live indicator label */}
+      <div className="flex items-center gap-2.5 mb-3">
         <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+          <span
+            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+            style={{ backgroundColor: 'var(--color-wealth-400)' }}
+          />
+          <span
+            className="relative inline-flex rounded-full h-2 w-2"
+            style={{ backgroundColor: 'var(--color-wealth-400)' }}
+          />
         </span>
-        {label || defaultLabel}
+        <p
+          className="text-xs font-bold uppercase tracking-[0.18em]"
+          style={{ color: 'oklch(0.85 0.06 55)' }}
+        >
+          {label || defaultLabel}
+        </p>
         {updatedAt && (
-          <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded-full ml-auto font-bold tracking-wider"
-            style={{ color: 'oklch(0.78 0.06 55)' }}
+          <span
+            className="ml-2 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full"
+            style={{
+              backgroundColor: 'oklch(1 0 0 / 0.1)',
+              color: 'oklch(0.88 0.05 55)',
+            }}
+            aria-label="Data real-time"
           >
-            🔴 LIVE
+            LIVE
           </span>
         )}
-      </p>
-      <h1 
-        className={`font-display text-4xl sm:text-5xl lg:text-[3.5rem] font-black tracking-tight leading-none text-white transition-colors duration-500 truncate py-1 ${flashClass}`}
+      </div>
+
+      {/* Main amount */}
+      <h1
+        ref={amountRef as React.RefObject<HTMLHeadingElement>}
+        className={`font-display font-black tracking-tight leading-none text-white transition-colors duration-500 nums ${flashClass}`}
+        style={{ fontSize: 'clamp(2rem, 4vw + 1rem, 3.75rem)' }}
         title={formatRupiah(displayValue)}
       >
         {formatRupiah(displayValue)}
       </h1>
-      {updatedAt && (
-        <p className="text-[10px] mt-2 font-medium" style={{ color: 'oklch(0.60 0.04 55)' }}>
-          Terakhir diperbarui: {new Date(updatedAt).toLocaleTimeString('id-ID')}
-        </p>
-      )}
+
+      {/* Sub breakdown */}
+      <div className="flex items-center gap-4 mt-3 flex-wrap">
+        <span
+          className="flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: 'oklch(0.75 0.05 55)' }}
+        >
+          <TrendingUp
+            style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-wealth-400)' }}
+          />
+          Kas: {formatRupiah(cash)}
+        </span>
+        <span
+          className="w-px h-3 opacity-30"
+          style={{ backgroundColor: 'oklch(0.85 0 0)' }}
+        />
+        <span
+          className="flex items-center gap-1.5 text-xs font-medium"
+          style={{ color: 'oklch(0.75 0.05 55)' }}
+        >
+          <TrendingDown
+            style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-brand-400)' }}
+          />
+          Investasi: {formatRupiah(investment)}
+        </span>
+        {updatedAt && (
+          <>
+            <span className="w-px h-3 opacity-30" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
+            <span className="text-[10px]" style={{ color: 'oklch(0.55 0.03 55)' }}>
+              {new Date(updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,10 @@
 // lib/gmail/parser.ts
 // Parser email transaksi dari berbagai bank/e-wallet Indonesia
+//
+// FIX BUG #3: parseRupiah diperbaiki untuk menangani format "1.500.000,00" dengan benar
+// FIX BUG #5: Pencocokan sender diubah dari exact-match ke domain-based matching
+// FITUR: Testing Mode — jika GMAIL_TEST_MODE=true di env, subject "[TEST:MANDIRI]" dll.
+//        akan mem-bypass pencocokan sender dan langsung parse menggunakan parser yang sesuai
 
 import { inferCategoryHint, type CategoryHint } from '../category-matcher';
 
@@ -20,14 +25,32 @@ interface EmailParts {
   from: string;
 }
 
-// Map pengirim email ke fungsi parser-nya
-const KNOWN_SENDERS: Record<string, (parts: EmailParts) => ParsedGmailTx | null> = {
-  'notifikasi@bca.co.id': parseBCA,
-  'no-reply@gojek.com': parseGoPay,
-  'no-reply@ovo.id': parseOVO,
-  'mandiri.notifikasi@bankmandiri.co.id': parseMandiri,
-  'noreply@tokopedia.com': parseTokopedia,
-  'cs@shopee.co.id': parseShopee,
+// ─── FIX BUG #5: Domain-based matching ────────────────────────────────────────
+// Sebelumnya: exact email address match (sangat rapuh, bisa gagal jika bank ganti sender)
+// Sekarang: cukup cocokkan domain pengirim (@bankmandiri.co.id, @bca.co.id, dll.)
+
+interface SenderRule {
+  domains: string[];
+  parser: (parts: EmailParts) => ParsedGmailTx | null;
+}
+
+const SENDER_DOMAIN_RULES: SenderRule[] = [
+  { domains: ['bca.co.id'], parser: parseBCA },
+  { domains: ['gojek.com', 'goto.com', 'gojekmsg.com'], parser: parseGoPay },
+  { domains: ['ovo.id'], parser: parseOVO },
+  { domains: ['bankmandiri.co.id'], parser: parseMandiri },
+  { domains: ['tokopedia.com'], parser: parseTokopedia },
+  { domains: ['shopee.co.id', 'shopee.com'], parser: parseShopee },
+];
+
+// Map keyword di subject untuk Testing Mode (GMAIL_TEST_MODE=true)
+const TEST_MODE_KEYWORDS: Record<string, (parts: EmailParts) => ParsedGmailTx | null> = {
+  'TEST:BCA': parseBCA,
+  'TEST:GOPAY': parseGoPay,
+  'TEST:OVO': parseOVO,
+  'TEST:MANDIRI': parseMandiri,
+  'TEST:TOKOPEDIA': parseTokopedia,
+  'TEST:SHOPEE': parseShopee,
 };
 
 // ─── Tipe minimal Gmail API ─────────────────────────────────────────────────
@@ -70,16 +93,37 @@ export function parseTransactionFromEmail(
   const emailMatch = fromHeader.match(/<([^>]+)>/) ?? fromHeader.match(/(\S+@\S+)/);
   const senderEmail = (emailMatch?.[1] ?? fromHeader).toLowerCase().trim();
 
-  const parserFn = KNOWN_SENDERS[senderEmail];
-  if (!parserFn) return null;
-
   const body = extractBody(gmailMessage.payload);
   const date = gmailMessage.internalDate
     ? new Date(Number(gmailMessage.internalDate))
     : new Date();
 
+  // ── TESTING MODE ──────────────────────────────────────────────────────────
+  // Jika GMAIL_TEST_MODE=true, cek apakah subject mengandung keyword [TEST:BANK]
+  // Ini memungkinkan pengiriman email dari email pribadi untuk pengujian
+  if (process.env.GMAIL_TEST_MODE === 'true') {
+    const subjectUpper = subject.toUpperCase();
+    for (const [keyword, parserFn] of Object.entries(TEST_MODE_KEYWORDS)) {
+      if (subjectUpper.includes(keyword)) {
+        console.log(`[Gmail Parser] TEST MODE — keyword "${keyword}" ditemukan di subject, bypass sender check`);
+        try {
+          return parserFn({ subject, body, date, from: senderEmail });
+        } catch (err) {
+          console.error(`[Gmail Parser] Error parsing test email dengan keyword ${keyword}:`, err);
+          return null;
+        }
+      }
+    }
+  }
+
+  // ── NORMAL MODE: Domain-based sender matching ─────────────────────────────
+  const senderDomain = senderEmail.split('@')[1] ?? '';
+  const rule = SENDER_DOMAIN_RULES.find((r) => r.domains.includes(senderDomain));
+
+  if (!rule) return null;
+
   try {
-    return parserFn({ subject, body, date, from: senderEmail });
+    return rule.parser({ subject, body, date, from: senderEmail });
   } catch (err) {
     console.error(`[Gmail Parser] Error parsing email dari ${senderEmail}:`, err);
     return null;
@@ -136,12 +180,21 @@ function findPart(parts: GmailPart[], mimeType: string): GmailPart | null {
 }
 
 /**
- * Konversi string angka Rupiah (misal "1.500.000") ke integer.
+ * FIX BUG #3: Konversi string angka Rupiah ke integer dengan benar.
+ *
+ * Format Indonesia: 1.500.000 (titik = pemisah ribuan), 1.500.000,00 (koma = desimal)
+ *
+ * SEBELUM (SALAH): "1.500.000,00" → hapus semua titik & koma → "150000000" → 150.000.000 (100x!)
+ * SESUDAH (BENAR): "1.500.000,00" → hapus ",00" → "1.500.000" → hapus titik → "1500000" → 1.500.000 ✓
  */
 function parseRupiah(str: string): number {
-  // Hapus semua non-digit kecuali koma dan titik
-  // Format: 1.500.000 atau 1.500.000,00
-  return parseInt(str.replace(/[.,]/g, '').replace(/\D/g, ''), 10);
+  return parseInt(
+    str
+      .replace(/,\d{1,2}$/, '')  // 1. Hapus desimal di akhir: ",00" atau ",5"
+      .replace(/\./g, '')          // 2. Hapus titik pemisah ribuan
+      .replace(/\D/g, ''),         // 3. Hapus karakter non-digit sisanya (spasi, dsb)
+    10,
+  );
 }
 
 // ─── Per-bank parsers ─────────────────────────────────────────────────────────
@@ -158,7 +211,7 @@ function parseBCA({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 
   if (!isDebit && !isCredit) return null;
 
-  const amountMatch = body.match(/Rp\s?([\d.,]+)/i) ?? subject.match(/Rp\s?([\d.,]+)/i);
+  const amountMatch = body.match(/Rp\.?\s?([\d.,]+)/i) ?? subject.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);
@@ -188,7 +241,7 @@ function parseGoPay({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 
   if (!isOut && !isIn) return null;
 
-  const amountMatch = body.match(/Rp\s?([\d.,]+)/i) ?? subject.match(/Rp\s?([\d.,]+)/i);
+  const amountMatch = body.match(/Rp\.?\s?([\d.,]+)/i) ?? subject.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);
@@ -214,7 +267,7 @@ function parseOVO({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 
   if (!isOut && !isIn) return null;
 
-  const amountMatch = body.match(/Rp\s?([\d.,]+)/i) ?? subject.match(/Rp\s?([\d.,]+)/i);
+  const amountMatch = body.match(/Rp\.?\s?([\d.,]+)/i) ?? subject.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);
@@ -235,18 +288,23 @@ function parseOVO({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 }
 
 function parseMandiri({ subject, body, date }: EmailParts): ParsedGmailTx | null {
-  const isDebit = /debit|pembayaran|transfer keluar|pembelian/i.test(subject + body);
-  const isCredit = /kredit|transfer masuk|terima/i.test(subject + body);
+  const combined = subject + ' ' + body;
+  const isDebit = /debit|pembayaran|transfer keluar|pembelian|keluar/i.test(combined);
+  const isCredit = /kredit|transfer masuk|terima|masuk/i.test(combined);
 
   if (!isDebit && !isCredit) return null;
 
-  const amountMatch = body.match(/Rp\.?\s?([\d.,]+)/i) ?? subject.match(/Rp\.?\s?([\d.,]+)/i);
+  // Mandiri sering pakai "Rp." atau "Rp " atau "IDR"
+  const amountMatch =
+    body.match(/Rp\.?\s?([\d.,]+)/i) ??
+    body.match(/IDR\s?([\d.,]+)/i) ??
+    subject.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);
   if (isNaN(amount) || amount <= 0) return null;
 
-  const merchantMatch = body.match(/(?:kepada|ke|tujuan|merchant)\s*[:\-]?\s*([^\n\r,]+)/i);
+  const merchantMatch = body.match(/(?:kepada|ke|tujuan|merchant|beneficiary)\s*[:\-]?\s*([^\n\r,]+)/i);
   const merchant = merchantMatch?.[1]?.trim() ?? null;
 
   return {
@@ -266,8 +324,8 @@ function parseTokopedia({ subject, body, date }: EmailParts): ParsedGmailTx | nu
   if (!isPurchase) return null;
 
   const amountMatch =
-    body.match(/(?:total|grand total|jumlah)\s*[:\-]?\s*Rp\s?([\d.,]+)/i) ??
-    body.match(/Rp\s?([\d.,]+)/i);
+    body.match(/(?:total|grand total|jumlah)\s*[:\-]?\s*Rp\.?\s?([\d.,]+)/i) ??
+    body.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);
@@ -293,8 +351,8 @@ function parseShopee({ subject, body, date }: EmailParts): ParsedGmailTx | null 
   if (!isPurchase) return null;
 
   const amountMatch =
-    body.match(/(?:total|jumlah|grand total)\s*[:\-]?\s*Rp\s?([\d.,]+)/i) ??
-    body.match(/Rp\s?([\d.,]+)/i);
+    body.match(/(?:total|jumlah|grand total)\s*[:\-]?\s*Rp\.?\s?([\d.,]+)/i) ??
+    body.match(/Rp\.?\s?([\d.,]+)/i);
   if (!amountMatch) return null;
 
   const amount = parseRupiah(amountMatch[1]);

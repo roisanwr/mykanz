@@ -1,8 +1,15 @@
 // app/api/webhook/gmail-push/route.ts
 // Dipanggil Google Pub/Sub setiap ada email baru di inbox user yang connect Gmail
 // KRITIS: Harus balas 200 dalam < 10 detik atau Google akan retry terus
+//
+// FIX BUG #2: Ganti .catch() non-blocking dengan waitUntil() dari @vercel/functions
+//   Sebelumnya: return dulu lalu processNewEmails() → Vercel langsung kill function → email tidak pernah diproses
+//   Sekarang: waitUntil() memberi tahu Vercel agar function tetap hidup sampai promise selesai
+//
+// FIX BUG #6: Handle error 404 (historyId expired) → reset historyId agar tidak stuck selamanya
 
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { google } from 'googleapis';
 import prisma from '@/lib/prisma';
 import { getClientForUser, handleInvalidGrant } from '@/lib/gmail/token-manager';
@@ -46,16 +53,16 @@ export async function POST(req: NextRequest) {
 
   const { emailAddress, historyId: newHistoryId } = notification;
 
-  // ← BALAS 200 SEGERA — proses berat dilakukan di background
-  // Pub/Sub hanya butuh konfirmasi bahwa pesan diterima
-  const responsePromise = NextResponse.json({ ok: true });
+  // FIX BUG #2: Gunakan waitUntil() — Vercel akan menjaga function tetap hidup
+  // sampai processNewEmails() selesai, bahkan setelah response 200 dikirim ke Pub/Sub.
+  // Sebelumnya: processNewEmails().catch() langsung mati saat return dieksekusi.
+  waitUntil(
+    processNewEmails(emailAddress, newHistoryId).catch((err) => {
+      console.error('[Gmail Webhook] Background processing error:', err);
+    })
+  );
 
-  // Background processing (non-blocking)
-  processNewEmails(emailAddress, newHistoryId).catch((err) => {
-    console.error('[Gmail Webhook] Background processing error:', err);
-  });
-
-  return responsePromise;
+  return NextResponse.json({ ok: true });
 }
 
 async function processNewEmails(
@@ -144,6 +151,15 @@ async function processNewEmails(
       error?.code === 401
     ) {
       await handleInvalidGrant(user.id);
+    } else if (error?.code === 404) {
+      // FIX BUG #6: historyId sudah terlalu lama (Google hanya simpan ~7 hari).
+      // Reset ke historyId baru agar webhook berikutnya bisa jalan normal.
+      // Tanpa fix ini, sistem akan stuck terus mencoba historyId lama dan selalu 404.
+      await prisma.users.update({
+        where: { id: user.id },
+        data: { gmail_history_id: newHistoryId },
+      });
+      console.warn(`[Gmail Webhook] historyId expired (404), reset ke ${newHistoryId}`);
     } else {
       console.error('[Gmail Webhook] Error fetching history:', err);
     }

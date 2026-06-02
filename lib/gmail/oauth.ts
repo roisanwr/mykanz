@@ -34,13 +34,47 @@ export function getAuthUrl(userId: string): string {
 /**
  * Handle callback dari Google setelah user approve/deny consent screen.
  * Menukar authorization code dengan tokens, menyimpannya, dan setup watch.
+ *
+ * FIX BUG #1: gmail_connected = true hanya di-set SETELAH setupGmailWatch berhasil.
+ * Sebelumnya, jika setupGmailWatch gagal, DB tetap punya gmail_connected = true
+ * tapi tidak ada watch yang berjalan → UI tampil "connected" tapi notif tidak jalan.
+ *
+ * FIX BUG #4: Email address diambil langsung dari Gmail API (profile),
+ * bukan hanya dari id_token yang bisa saja tidak ada atau gagal di-decode.
  */
 export async function handleCallback(code: string, userId: string): Promise<void> {
   const oauth2Client = createOAuth2Client();
   const { tokens } = await oauth2Client.getToken(code);
 
-  // Simpan tokens ke DB (terenkripsi) + set gmail_connected = true
+  // Set credentials di client dulu agar bisa memanggil API
+  oauth2Client.setCredentials(tokens);
+
+  // FIX BUG #4: Ambil email address langsung dari Gmail API — lebih reliable
+  // daripada decode id_token yang bisa tidak hadir atau gagal
+  const gmailApi = google.gmail({ version: 'v1', auth: oauth2Client });
+  const profile = await gmailApi.users.getProfile({ userId: 'me' });
+  const emailAddress = profile.data.emailAddress;
+
+  if (!emailAddress) {
+    throw new Error('Tidak bisa mendapatkan email address dari Google profile');
+  }
+
+  // Simpan tokens ke DB (terenkripsi)
   await saveTokens(userId, tokens);
+
+  // Simpan email address secara eksplisit (jangan hanya andalkan id_token)
+  await prisma.users.update({
+    where: { id: userId },
+    data: { gmail_email: emailAddress },
+  });
+
+  // FIX BUG #1: Setup watch DULU sebelum set gmail_connected = true
+  // Jika setupGmailWatch gagal (mis. GCP_PROJECT_ID salah, topic belum dibuat),
+  // handleCallback akan throw dan callback route redirect ke ?gmail=error.
+  // DB TIDAK akan punya gmail_connected = true yang salah.
+  await setupGmailWatch(userId, oauth2Client);
+
+  // Baru set gmail_connected = true SETELAH watch berhasil
   await prisma.users.update({
     where: { id: userId },
     data: {
@@ -48,10 +82,6 @@ export async function handleCallback(code: string, userId: string): Promise<void
       gmail_needs_reauth: false,
     },
   });
-
-  // Setup Gmail push notification
-  oauth2Client.setCredentials(tokens);
-  await setupGmailWatch(userId, oauth2Client);
 }
 
 /**

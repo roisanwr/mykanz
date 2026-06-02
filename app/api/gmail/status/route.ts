@@ -1,5 +1,5 @@
 // app/api/gmail/status/route.ts
-// GET  → cek status koneksi Gmail user
+// GET  → cek status koneksi Gmail user (+ info diagnostik)
 // DELETE → disconnect Gmail (hapus tokens dari DB)
 
 import { NextResponse } from 'next/server';
@@ -18,6 +18,8 @@ export async function GET() {
       gmail_connected: true,
       gmail_email: true,
       gmail_needs_reauth: true,
+      gmail_watch_expiry: true,
+      gmail_history_id: true,
     },
   });
 
@@ -25,10 +27,17 @@ export async function GET() {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
+  const now = new Date();
+  const watchExpiry = user.gmail_watch_expiry;
+
   return NextResponse.json({
     connected: user.gmail_connected,
     email: user.gmail_email,
     needs_reauth: user.gmail_needs_reauth,
+    // Info diagnostik tambahan — berguna untuk debugging
+    watch_active: watchExpiry ? watchExpiry > now : false,
+    watch_expires_at: watchExpiry?.toISOString() ?? null,
+    history_id_set: !!user.gmail_history_id,
   });
 }
 

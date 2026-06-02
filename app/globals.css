@@ -73,7 +73,7 @@
 
   /* ── Typography Fonts ── */
   --font-sans:    var(--dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--syne), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono:    ui-monospace, 'Cascadia Code', 'Fira Mono', monospace;
 
   /* ── Registered Animations ── */

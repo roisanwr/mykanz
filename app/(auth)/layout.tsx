@@ -39,13 +39,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         {/* Brand Logo */}
         <Link href="/" className="relative z-10 flex items-center gap-3 w-fit group">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br shadow-lg transition-transform duration-300 group-hover:scale-105"
-               style={{ 
-                 backgroundImage: 'linear-gradient(to bottom right, var(--color-brand-400), var(--color-brand-600))',
-                 boxShadow: '0 8px 24px oklch(0.70 0.185 47 / 0.4)'
-               }}>
-            <Hexagon className="w-6 h-6 text-white" fill="currentColor" strokeWidth={1} />
-          </div>
+          <img 
+            src="/logomykanz.png" 
+            alt="MyKanz Logo" 
+            className="w-12 h-12 object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_4px_12px_oklch(0.70_0.185_47/0.4)]" 
+          />
           <span className="font-display font-black text-2xl tracking-tight text-white">MyKanz</span>
         </Link>
 
@@ -74,13 +72,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Mobile Brand Header */}
         <div className="lg:hidden flex justify-center mb-10">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br shadow-lg transition-transform duration-300 group-hover:scale-105"
-                 style={{ 
-                   backgroundImage: 'linear-gradient(to bottom right, var(--color-brand-400), var(--color-brand-600))',
-                   boxShadow: '0 8px 24px oklch(0.70 0.185 47 / 0.3)'
-                 }}>
-              <Hexagon className="w-7 h-7 text-white" fill="currentColor" strokeWidth={1} />
-            </div>
+            <img 
+              src="/logomykanz.png" 
+              alt="MyKanz Logo" 
+              className="w-14 h-14 object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_4px_16px_oklch(0.70_0.185_47/0.3)]" 
+            />
             <span className="font-display font-black text-3xl tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
               MyKanz
             </span>

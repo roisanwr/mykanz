@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { DM_Sans, Syne } from 'next/font/google'
+import { DM_Sans, Outfit } from 'next/font/google'
 import './globals.css'
 import { auth } from '@/lib/auth'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -13,11 +13,10 @@ const dmSans = DM_Sans({
   display: 'swap',
 })
 
-// Syne — display font: geometric, distinctive, personality
-const syne = Syne({
+// Outfit — display font: clean, geometric, very readable for fintech
+const outfit = Outfit({
   subsets: ['latin'],
-  variable: '--syne',
-  weight: ['700', '800'],
+  variable: '--outfit',
   display: 'swap',
 })
 
@@ -56,7 +55,7 @@ export default async function RootLayout({
     // sebelum React hydrate, jadi mismatch adalah hal yang disengaja.
     <html
       lang="id"
-      className={`${dmSans.variable} ${syne.variable} light`}
+      className={`${dmSans.variable} ${outfit.variable} light`}
       suppressHydrationWarning
     >
       <head>

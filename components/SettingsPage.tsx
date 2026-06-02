@@ -224,7 +224,8 @@ export default function SettingsPage({
       // Bersihkan URL param
       window.history.replaceState({}, '', '/settings');
     } else if (gmailParam === 'error') {
-      showFeedback('Gagal menghubungkan Gmail. Coba lagi.', 'error');
+      const details = params.get('details');
+      showFeedback(`Gagal menghubungkan Gmail: ${details ? decodeURIComponent(details) : 'Coba lagi.'}`, 'error');
       setActiveSection('gmail');
       window.history.replaceState({}, '', '/settings');
     } else if (gmailParam === 'denied') {

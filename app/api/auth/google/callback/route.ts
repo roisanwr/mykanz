@@ -23,8 +23,9 @@ export async function GET(req: NextRequest) {
   try {
     await handleCallback(code, userId);
     return redirect('/settings?gmail=connected');
-  } catch (err) {
+  } catch (err: any) {
     console.error('[Gmail Callback] Error:', err);
-    return redirect('/settings?gmail=error');
+    const errorMessage = err?.message || 'Unknown error';
+    return redirect(`/settings?gmail=error&details=${encodeURIComponent(errorMessage)}`);
   }
 }

@@ -64,7 +64,8 @@ export default function EditTransactionModal({
       setDestWalletId(transaction.to_wallet_id || '');
       setAmountInput(new Intl.NumberFormat('id-ID').format(Number(transaction.amount)));
       
-      const date = new Date(transaction.transaction_date);
+      const rawDate = transaction.transaction_date ?? new Date();
+      const date = new Date(rawDate);
       // Format YYYY-MM-DD local timezone
       const tzOffset = date.getTimezoneOffset() * 60000;
       const localISOTime = new Date(date.getTime() - tzOffset).toISOString().slice(0, 10);

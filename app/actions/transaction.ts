@@ -116,3 +116,74 @@ export async function createTransactionAction(payload: TransactionPayload) {
     return { error: error.message || 'Gagal menyimpan transaksi' }
   }
 }
+
+// Skema untuk Update Transaksi (mirip dengan Create, tapi ID wajib)
+const UpdateTransactionSchema = TransactionSchema.extend({
+  id: z.string().uuid("Transaction ID tidak valid"),
+});
+
+export type UpdateTransactionPayload = z.infer<typeof UpdateTransactionSchema>
+
+export async function updateTransactionAction(payload: UpdateTransactionPayload) {
+  try {
+    const session = await auth()
+    if (!session?.user?.id) {
+      return { error: 'Unauthorized' }
+    }
+
+    const validatedData = UpdateTransactionSchema.safeParse(payload)
+    if (!validatedData.success) {
+      return { error: 'Validasi gagal: ' + validatedData.error.issues[0].message }
+    }
+
+    const {
+      id,
+      transaction_type, // Hanya untuk cek, update tipe tidak diizinkan untuk keamanan
+      wallet_id,
+      amount,
+      description,
+      transaction_date,
+      category_id,
+      event_id,
+      to_wallet_id,
+    } = validatedData.data
+
+    const txDate = new Date(transaction_date)
+
+    // Cek apakah transaksi ada dan milik user
+    const existingTx = await prisma.fiat_transactions.findUnique({
+      where: { id, user_id: session.user.id },
+    });
+
+    if (!existingTx) {
+      return { error: 'Transaksi tidak ditemukan atau tidak ada akses.' };
+    }
+
+    if (existingTx.transaction_type !== transaction_type) {
+      return { error: 'Tipe transaksi tidak bisa diubah setelah dibuat.' };
+    }
+
+    await prisma.fiat_transactions.update({
+      where: { id },
+      data: {
+        wallet_id,
+        amount,
+        description: description || null,
+        category_id: category_id || null,
+        event_id: event_id || null,
+        to_wallet_id: transaction_type === 'TRANSFER' ? to_wallet_id : null,
+        transaction_date: txDate,
+        needs_review: false, // otomatis tandai sudah di-review (berguna untuk impor Gmail)
+      },
+    });
+
+    revalidatePath('/')
+    revalidatePath('/transactions')
+    revalidatePath('/wallets')
+
+    return { success: true }
+  } catch (error: any) {
+    console.error('Server Action Error:', error)
+    return { error: error.message || 'Gagal mengupdate transaksi' }
+  }
+}

@@ -5,10 +5,11 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFeedback } from '@/components/FeedbackProvider';
 import { useRouter } from 'next/navigation';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X, Pin } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X, Pin, Eye } from 'lucide-react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { FiatTransaction } from '@/types';
+import EditTransactionModal from './EditTransactionModal';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const formatRupiah = (n: number) =>
@@ -45,6 +46,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
 
   const [isDeletingId, setIsDeletingId]     = useState<string | null>(null);
   const [toDelete, setToDelete]             = useState<FiatTransaction | null>(null);
+  const [editingTx, setEditingTx]           = useState<FiatTransaction | null>(null);
   const [deletedIds, setDeletedIds]         = useState<string[]>([]);
   const [mounted, setMounted]               = useState(false);
   const listRef                             = useRef<HTMLDivElement>(null);
@@ -281,7 +283,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
               </div>
             </div>
 
-            {/* Right: amount + delete */}
+            {/* Right: amount + actions */}
             <div className="flex items-center gap-3 shrink-0">
               <p
                 className="font-black text-sm sm:text-base nums"
@@ -290,36 +292,39 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
                 {cfg.prefix}{formatRupiah(amount)}
               </p>
 
-              <button
-                onClick={() => setToDelete(tx)}
-                disabled={isDeletingId === tx.id}
-                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 active:scale-95 disabled:opacity-30"
-                style={{
-                  color: 'var(--color-text-disabled)',
-                  backgroundColor: 'transparent',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.color = 'var(--color-expense-600)';
-                  el.style.backgroundColor = 'var(--color-expense-surface)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.color = 'var(--color-text-disabled)';
-                  el.style.backgroundColor = 'transparent';
-                }}
-                title="Hapus Transaksi"
-              >
-                {isDeletingId === tx.id
-                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  : <Trash2 className="w-4 h-4" />
-                }
-              </button>
+              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 gap-1">
+                <button
+                  onClick={() => setEditingTx(tx)}
+                  className="p-1.5 rounded-lg transition-all duration-150 active:scale-95 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                  title="Lihat Detail / Edit"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setToDelete(tx)}
+                  disabled={isDeletingId === tx.id}
+                  className="p-1.5 rounded-lg transition-all duration-150 active:scale-95 disabled:opacity-30 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                  title="Hapus Transaksi"
+                >
+                  {isDeletingId === tx.id
+                    ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    : <Trash2 className="w-4 h-4" />
+                  }
+                </button>
+              </div>
             </div>
           </div>
         );
       })}
       {renderModal()}
+      
+      {mounted && (
+        <EditTransactionModal
+          transaction={editingTx}
+          isOpen={!!editingTx}
+          onClose={() => setEditingTx(null)}
+        />
+      )}
     </div>
   );
 }

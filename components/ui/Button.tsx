@@ -83,7 +83,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
         transitionProperty: 'background-color, box-shadow, transform, opacity, border-color',
         transitionDuration: 'var(--duration-fast)',
         transitionTimingFunction: 'var(--ease-out-expo)',
-        focusVisibleRingColor: 'var(--color-brand-400)',
         ...style,
       }}
       {...props}

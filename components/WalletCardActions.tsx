@@ -3,15 +3,17 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { History, Pencil, Trash2, X, ArrowDownLeft, ArrowUpRight, ArrowRightLeft } from 'lucide-react';
+import { History, Pencil, Trash2, X, ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Star } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 import { useFeedback } from '@/components/FeedbackProvider';
+import { setDefaultWalletAction } from '@/app/actions/wallet';
 
-export default function WalletCardActions({ wallet }: { wallet: any }) {
+export default function WalletCardActions({ wallet, isDefault = false }: { wallet: any; isDefault?: boolean }) {
   const [activeModal, setActiveModal] = useState<'history' | 'edit' | 'delete' | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSettingDefault, setIsSettingDefault] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   
   const router = useRouter();
@@ -26,6 +28,23 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
   const closeModal = () => {
     setActiveModal(null);
     setErrorMsg('');
+  };
+
+  const handleSetDefault = async () => {
+    if (isDefault) return; // Sudah jadi default, tidak perlu action
+    setIsSettingDefault(true);
+    try {
+      const result = await setDefaultWalletAction(wallet.id);
+      if (result?.error) {
+        showFeedback(result.error, 'error');
+      } else {
+        showFeedback(`"${result.walletName}" dijadikan Dompet Utama!`, 'success');
+        router.refresh();
+      }
+    } catch {
+      showFeedback('Gagal mengatur dompet utama.', 'error');
+    }
+    setIsSettingDefault(false);
   };
 
   const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -215,6 +234,21 @@ export default function WalletCardActions({ wallet }: { wallet: any }) {
   return (
     <>
       <div className="absolute top-4 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+        <button
+          onClick={handleSetDefault}
+          disabled={isDefault || isSettingDefault}
+          className={`p-2 backdrop-blur-md rounded-lg shadow-sm border transition-all hover:scale-110 ${
+            isDefault
+              ? 'bg-amber-50 dark:bg-amber-500/20 text-amber-500 border-amber-200 dark:border-amber-500/30 cursor-default'
+              : 'bg-white/90 dark:bg-slate-800/90 hover:bg-amber-50 hover:text-amber-500 dark:hover:bg-amber-500/20 text-slate-400 dark:text-slate-500 border-slate-100 dark:border-slate-700'
+          }`}
+          title={isDefault ? 'Ini Dompet Utama' : 'Jadikan Dompet Utama (Fallback)'}
+        >
+          {isSettingDefault
+            ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            : <Star className={`w-4 h-4 ${isDefault ? 'fill-amber-400' : ''}`} />
+          }
+        </button>
         <button onClick={() => setActiveModal('history')} className="p-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-500/20 text-slate-400 dark:text-slate-500 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700 transition-all hover:scale-110" title="Riwayat">
           <History className="w-4 h-4" />
         </button>

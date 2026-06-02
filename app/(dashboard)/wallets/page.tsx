@@ -51,6 +51,13 @@ export default async function WalletsPage() {
   const walletsData = walletsDataRaw.map(w => ({ ...w, balance: Number(w.balance) }));
   const totalBalance = walletsData.reduce((acc, curr) => acc + curr.balance, 0);
 
+  // Ambil default_wallet_id dari profil user
+  const userProfile = await prisma.users.findUnique({
+    where: { id: session.user.id },
+    select: { default_wallet_id: true },
+  });
+  const defaultWalletId = userProfile?.default_wallet_id ?? null;
+
   return (
     <div className="space-y-5">
 
@@ -148,7 +155,7 @@ export default async function WalletsPage() {
                 />
 
                 {/* 3-dot actions */}
-                <WalletCardActions wallet={wallet} />
+                <WalletCardActions wallet={wallet} isDefault={wallet.id === defaultWalletId} />
 
                 {/* Icon + type badge */}
                 <div className="flex flex-col items-start gap-2.5 mb-4">
@@ -162,6 +169,17 @@ export default async function WalletsPage() {
                     <WalletTypeIcon type={wallet.type} size={20} />
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
+                    {wallet.id === defaultWalletId && (
+                      <span
+                        className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1"
+                        style={{
+                          backgroundColor: 'oklch(0.97 0.07 80)',
+                          color: 'oklch(0.55 0.15 60)',
+                        }}
+                      >
+                        ⭐ Fallback
+                      </span>
+                    )}
                     <span
                       className="text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider"
                       style={{

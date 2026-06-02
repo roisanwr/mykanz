@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import PageTransition from '@/components/shared/PageTransition'
 import type { AppUser } from '@/types'
+import { signOut } from 'next-auth/react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MenuItem = {
@@ -123,10 +124,8 @@ export default function DashboardLayout({
   // ── Logout ────────────────────────────────────────────────────────────────
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/signout', { method: 'POST' })
-    } catch { /* ignore */ } finally {
-      router.push('/login')
-    }
+      await signOut({ callbackUrl: '/login' })
+    } catch { /* ignore */ }
   }
 
   // ── Sub-menu toggle ───────────────────────────────────────────────────────

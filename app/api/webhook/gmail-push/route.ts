@@ -15,6 +15,7 @@ import prisma from '@/lib/prisma';
 import { getClientForUser, handleInvalidGrant } from '@/lib/gmail/token-manager';
 import { parseTransactionFromEmail } from '@/lib/gmail/parser';
 import { findBestMatchingCategory } from '@/lib/category-matcher';
+import { findBestMatchingWallet } from '@/lib/wallet-matcher';
 import type { ParsedGmailTx } from '@/lib/gmail/parser';
 
 // Berikan Vercel cukup waktu untuk proses background
@@ -76,6 +77,10 @@ async function processNewEmails(
       id: true,
       gmail_history_id: true,
       default_wallet_id: true,
+      wallets: {
+        where: { deleted_at: null },
+        select: { id: true, name: true },
+      },
     },
   });
 
@@ -131,7 +136,13 @@ async function processNewEmails(
 
           const parsedTx = parseTransactionFromEmail(msgRes.data as Parameters<typeof parseTransactionFromEmail>[0]);
           if (parsedTx) {
-            await saveTransactionIfNotDuplicate(user.id, parsedTx, msgId, user.default_wallet_id);
+            await saveTransactionIfNotDuplicate(
+              user.id,
+              parsedTx,
+              msgId,
+              user.wallets,
+              user.default_wallet_id,
+            );
           }
         } catch (msgErr) {
           console.error(`[Gmail Webhook] Error processing msg ${msgId}:`, msgErr);
@@ -170,6 +181,7 @@ async function saveTransactionIfNotDuplicate(
   userId: string,
   tx: ParsedGmailTx,
   gmailMsgId: string,
+  userWallets: { id: string; name: string }[],
   defaultWalletId: string | null,
 ): Promise<void> {
   // Cek apakah gmail_msg_id sudah ada (deduplication)
@@ -183,14 +195,23 @@ async function saveTransactionIfNotDuplicate(
     return;
   }
 
-  // Tentukan wallet: gunakan default_wallet_id user, atau ambil wallet pertama
-  let walletId = defaultWalletId;
-  if (!walletId) {
-    const firstWallet = await prisma.wallets.findFirst({
-      where: { user_id: userId, deleted_at: null },
-      select: { id: true },
-    });
-    walletId = firstWallet?.id ?? null;
+  // ─── Smart Wallet Routing ───────────────────────────────────────────────
+  // 1. Coba cocokkan nama sumber (BCA, OVO, Mandiri, dll.) dengan nama dompet user
+  const smartMatched = findBestMatchingWallet(userWallets, tx.source);
+
+  let walletId: string | null = null;
+
+  if (smartMatched) {
+    walletId = smartMatched.id;
+    console.log(`[Gmail Webhook] Smart wallet match: "${tx.source}" → dompet "${smartMatched.name}"`);
+  } else if (defaultWalletId) {
+    // 2. Fallback ke dompet utama (default_wallet_id) yang diset manual user
+    walletId = defaultWalletId;
+    console.log(`[Gmail Webhook] No wallet match for "${tx.source}", fallback ke default wallet`);
+  } else if (userWallets.length > 0) {
+    // 3. Last resort: pakai dompet pertama yang ada
+    walletId = userWallets[0].id;
+    console.log(`[Gmail Webhook] No default wallet, pakai dompet pertama: "${userWallets[0].name}"`);
   }
 
   if (!walletId) {

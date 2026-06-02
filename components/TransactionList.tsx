@@ -5,102 +5,163 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useFeedback } from '@/components/FeedbackProvider';
 import { useRouter } from 'next/navigation';
-import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowRightLeft, Trash2, X, Pin } from 'lucide-react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import type { FiatTransaction } from '@/types';
 
+// ── Formatters ────────────────────────────────────────────────────────────────
+const formatRupiah = (n: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n);
+
+// ── Type config map ───────────────────────────────────────────────────────────
+const TX_CONFIG = {
+  PEMASUKAN:   {
+    iconBg:    'var(--color-wealth-surface)',
+    iconColor: 'var(--color-wealth-600)',
+    amountColor: 'var(--color-wealth-600)',
+    Icon:      ArrowDownLeft,
+    prefix:    '+',
+  },
+  PENGELUARAN: {
+    iconBg:    'var(--color-expense-surface)',
+    iconColor: 'var(--color-expense-600)',
+    amountColor: 'var(--color-text-primary)',
+    Icon:      ArrowUpRight,
+    prefix:    '−',
+  },
+  TRANSFER: {
+    iconBg:    'var(--color-invest-surface)',
+    iconColor: 'var(--color-invest-600)',
+    amountColor: 'var(--color-invest-600)',
+    Icon:      ArrowRightLeft,
+    prefix:    '',
+  },
+} as const;
+
 export default function TransactionList({ transactions }: { transactions: FiatTransaction[] }) {
   const { showFeedback } = useFeedback();
   const router = useRouter();
-  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
-  const [transactionToDelete, setTransactionToDelete] = useState<FiatTransaction | null>(null);
-  const [optimisticDeletedIds, setOptimisticDeletedIds] = useState<string[]>([]);
-  const [mounted, setMounted] = useState(false);
-  const listRef = useRef<HTMLDivElement>(null);
+
+  const [isDeletingId, setIsDeletingId]     = useState<string | null>(null);
+  const [toDelete, setToDelete]             = useState<FiatTransaction | null>(null);
+  const [deletedIds, setDeletedIds]         = useState<string[]>([]);
+  const [mounted, setMounted]               = useState(false);
+  const listRef                             = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
 
-  // GSAP: stagger transaction rows into view on mount / data change
-  // Menggunakan useGSAP untuk integrasi React 19 yang lebih baik
+  // GSAP stagger on mount / data change
   useGSAP(() => {
     const container = listRef.current;
     if (!container || transactions.length === 0) return;
-
     const rows = container.querySelectorAll<HTMLElement>('[data-tx-row]');
     gsap.fromTo(
       rows,
-      { opacity: 0, y: 14, filter: 'blur(4px)' },
+      { opacity: 0, y: 12, filter: 'blur(3px)' },
       {
-        opacity:  1,
-        y:        0,
-        filter:   'blur(0px)',
-        duration: 0.5,
-        stagger:  0.05,
-        ease:     'yui', // Menggunakan global ease Yui
+        opacity: 1, y: 0, filter: 'blur(0px)',
+        duration: 0.45, stagger: 0.04, ease: 'yui',
         clearProps: 'all',
       }
     );
   }, { dependencies: [transactions], scope: listRef });
 
   const handleDelete = async (id: string) => {
-    // Optimistic UI: immediately hide the transaction
-    setOptimisticDeletedIds(prev => [...prev, id]);
+    setDeletedIds(prev => [...prev, id]);
     setIsDeletingId(id);
-    
     try {
-      const res = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
+      const res    = await fetch(`/api/transactions?id=${id}`, { method: 'DELETE' });
       const result = await res.json();
       if (!res.ok || result?.error) {
-        // Revert optimistic update
-        setOptimisticDeletedIds(prev => prev.filter(did => did !== id));
+        setDeletedIds(prev => prev.filter(d => d !== id));
         showFeedback(result.error || 'Gagal menghapus transaksi.', 'error');
       } else {
         showFeedback('Transaksi berhasil dihapus', 'delete');
         router.refresh();
       }
     } catch {
-      // Revert optimistic update
-      setOptimisticDeletedIds(prev => prev.filter(did => did !== id));
+      setDeletedIds(prev => prev.filter(d => d !== id));
       showFeedback('Gagal terhubung ke server.', 'error');
     }
     setIsDeletingId(null);
-    setTransactionToDelete(null);
+    setToDelete(null);
   };
 
+  // ── Delete confirmation modal ──────────────────────────────────────────────
   const renderModal = () => {
-    if (!mounted || !transactionToDelete) return null;
-
+    if (!mounted || !toDelete) return null;
     return createPortal(
-      <div 
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
-        onClick={() => setTransactionToDelete(null)} 
+      <div
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200"
+        style={{ backgroundColor: 'oklch(0.10 0.02 250 / 0.65)', backdropFilter: 'blur(8px)' }}
+        onClick={() => setToDelete(null)}
       >
-        <div 
-          className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
-          onClick={(e) => e.stopPropagation()} 
+        <div
+          className="w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200"
+          style={{
+            backgroundColor: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-xl)',
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-700 bg-red-50/50 dark:bg-red-500/10">
-            <h3 className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
-              <Trash2 className="w-5 h-5"/> Hapus Transaksi
+          {/* Header */}
+          <div
+            className="flex justify-between items-center p-5"
+            style={{
+              borderBottom: '1px solid var(--color-border-subtle)',
+              backgroundColor: 'var(--color-expense-surface)',
+            }}
+          >
+            <h3
+              className="text-base font-bold flex items-center gap-2"
+              style={{ color: 'var(--color-expense-700)' }}
+            >
+              <Trash2 className="w-5 h-5" /> Hapus Transaksi
             </h3>
-            <button onClick={() => setTransactionToDelete(null)} className="text-slate-400 hover:text-red-500 bg-white/50 dark:bg-slate-800/50 hover:bg-red-100 dark:hover:bg-red-500/20 p-1.5 rounded-lg transition-colors">
+            <button
+              onClick={() => setToDelete(null)}
+              className="p-1.5 rounded-lg transition-colors"
+              style={{ color: 'var(--color-text-tertiary)' }}
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
-          
-          <div className="p-6 space-y-4">
-            <p className="text-slate-600 dark:text-slate-300">
-              Apakah kamu yakin ingin menghapus transaksi ini? Aksi ini tidak dapat dibatalkan dan akan mempengaruhi saldo dompet terkait.
+
+          {/* Body */}
+          <div className="p-6 space-y-5">
+            <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              Yakin ingin menghapus transaksi ini? Aksi tidak dapat dibatalkan dan akan mempengaruhi saldo dompet terkait.
             </p>
-            <div className="flex gap-3 pt-6 border-t border-slate-100 dark:border-slate-700 mt-2">
-              <button onClick={() => setTransactionToDelete(null)} className="flex-1 px-4 py-2.5 rounded-xl font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors">Batal</button>
-              <button 
-                onClick={() => handleDelete(transactionToDelete.id)} 
-                disabled={isDeletingId === transactionToDelete.id} 
-                className="flex-1 px-4 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex justify-center items-center"
+
+            <div
+              className="flex gap-3 pt-5"
+              style={{ borderTop: '1px solid var(--color-border-subtle)' }}
+            >
+              <button
+                onClick={() => setToDelete(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm transition-all active:scale-[0.98]"
+                style={{
+                  backgroundColor: 'var(--color-bg-sunken)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                }}
               >
-                {isDeletingId === transactionToDelete.id ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : 'Ya, Hapus'}
+                Batal
+              </button>
+              <button
+                onClick={() => handleDelete(toDelete.id)}
+                disabled={isDeletingId === toDelete.id}
+                className="flex-1 px-4 py-2.5 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ backgroundColor: 'var(--color-expense-500)' }}
+              >
+                {isDeletingId === toDelete.id ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  'Ya, Hapus'
+                )}
               </button>
             </div>
           </div>
@@ -110,103 +171,151 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
     );
   };
 
-  const formatRupiah = (angka: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
-  };
+  // ── Empty state ────────────────────────────────────────────────────────────
+  const visible = transactions.filter(tx => !deletedIds.includes(tx.id));
 
-  const visibleTransactions = transactions.filter(tx => !optimisticDeletedIds.includes(tx.id));
-
-  if (visibleTransactions.length === 0) {
+  if (visible.length === 0) {
     return (
-      <div className="bg-white dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-10 flex flex-col items-center justify-center text-center">
-        <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-full mb-4">
-          <ArrowRightLeft className="w-8 h-8 text-slate-400 dark:text-slate-500" />
+      <div
+        className="flex flex-col items-center justify-center text-center p-10 rounded-2xl border-2 border-dashed"
+        style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-bg-sunken)' }}
+      >
+        <div
+          className="p-4 rounded-2xl mb-5"
+          style={{ backgroundColor: 'var(--color-bg-elevated)' }}
+        >
+          <ArrowRightLeft style={{ width: '2rem', height: '2rem', color: 'var(--color-text-disabled)' }} />
         </div>
-        <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Daftar Masih Kosong</h4>
-        <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-6">
-          Catat pengeluaran atau pemasukan pertamamu hari ini. Setiap rupiah yang dicatat adalah satu langkah lebih dekat ke tujuan.
+        <h4 className="font-display font-bold mb-1.5" style={{ color: 'var(--color-text-primary)', fontSize: 'var(--text-lg)' }}>
+          Daftar Masih Kosong
+        </h4>
+        <p className="text-sm max-w-xs leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+          Catat pengeluaran atau pemasukan pertamamu. Setiap rupiah yang dicatat satu langkah lebih dekat ke tujuan.
         </p>
       </div>
     );
   }
 
+  // ── Transaction rows ───────────────────────────────────────────────────────
   return (
-    <div ref={listRef} className="space-y-4">
-      {visibleTransactions.map((tx) => {
-        // Tentukan UI berdasarkan Tipe
-        let isIncome = false;
-        let isTransfer = false;
-        let bgColor = '';
-        let iconColor = '';
-        let IconComponent = ArrowUpRight;
-        let title = '';
-        let subtitle = new Date(tx.transaction_date ?? new Date()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    <div ref={listRef} className="space-y-1.5">
+      {visible.map((tx) => {
+        const type   = tx.transaction_type as keyof typeof TX_CONFIG;
+        const cfg    = TX_CONFIG[type] ?? TX_CONFIG.PENGELUARAN;
+        const Icon   = cfg.Icon;
+        const amount = Number(tx.amount);
 
-        if (tx.transaction_type === 'PEMASUKAN') {
-          isIncome = true;
-          bgColor = 'bg-emerald-50 dark:bg-emerald-500/10';
-          iconColor = 'text-emerald-600 dark:text-emerald-400';
-          IconComponent = ArrowDownLeft;
-          title = tx.categories?.name || 'Pemasukan';
-          subtitle += ` • Ke: ${tx.wallets_fiat_transactions_wallet_idTowallets?.name}`;
-        } else if (tx.transaction_type === 'PENGELUARAN') {
-          bgColor = 'bg-rose-50 dark:bg-rose-500/10';
-          iconColor = 'text-rose-600 dark:text-rose-400';
-          title = tx.categories?.name || 'Pengeluaran';
-          subtitle += ` • Dari: ${tx.wallets_fiat_transactions_wallet_idTowallets?.name}`;
-        } else if (tx.transaction_type === 'TRANSFER') {
-          isTransfer = true;
-          bgColor = 'bg-blue-50 dark:bg-blue-500/10';
-          iconColor = 'text-blue-600 dark:text-blue-400';
-          IconComponent = ArrowRightLeft;
-          title = 'Transfer';
-          subtitle += ` • ${tx.wallets_fiat_transactions_wallet_idTowallets?.name} ➔ ${tx.wallets_fiat_transactions_to_wallet_idTowallets?.name}`;
-        }
+        const walletFrom = tx.wallets_fiat_transactions_wallet_idTowallets?.name;
+        const walletTo   = tx.wallets_fiat_transactions_to_wallet_idTowallets?.name;
+        const dateLine   = new Date(tx.transaction_date ?? new Date())
+          .toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+        let subtitle = dateLine;
+        if (type === 'PEMASUKAN')   subtitle += ` · Ke: ${walletFrom}`;
+        if (type === 'PENGELUARAN') subtitle += ` · Dari: ${walletFrom}`;
+        if (type === 'TRANSFER')    subtitle += ` · ${walletFrom} → ${walletTo}`;
+
+        const title = type === 'TRANSFER'
+          ? 'Transfer'
+          : tx.categories?.name || (type === 'PEMASUKAN' ? 'Pemasukan' : 'Pengeluaran');
 
         return (
           <div
             key={tx.id}
             data-tx-row
-            className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700/80 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 group hover:border-slate-300 dark:hover:border-slate-600 transition-colors"
+            className="group flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl transition-all duration-150 cursor-default"
+            style={{
+              border: '1px solid transparent',
+              backgroundColor: 'var(--color-bg-surface)',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.backgroundColor = 'var(--color-bg-elevated)';
+              el.style.borderColor = 'var(--color-border-subtle)';
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.backgroundColor = 'var(--color-bg-surface)';
+              el.style.borderColor = 'transparent';
+            }}
           >
-            
-            <div className="flex items-center gap-4">
-              <div className={`p-3 rounded-xl ${bgColor} ${iconColor}`}>
-                <IconComponent className="w-5 h-5 sm:w-6 sm:h-6" />
+            {/* Left: icon + text */}
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div
+                className="p-2.5 rounded-xl shrink-0"
+                style={{ backgroundColor: cfg.iconBg, color: cfg.iconColor }}
+              >
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
-              <div>
-                <h4 className="font-bold text-slate-900 dark:text-white text-base sm:text-lg tracking-tight">
-                  {title} {tx.events?.name && <span className="text-[10px] bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 px-2 py-0.5 rounded-md ml-1 font-bold align-middle uppercase tracking-widest whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[120px]" title={tx.events.name}>📌 {tx.events.name}</span>}
-                </h4>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4
+                    className="font-semibold text-sm truncate"
+                    style={{ color: 'var(--color-text-primary)' }}
+                  >
+                    {title}
+                  </h4>
+                  {tx.events?.name && (
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
+                      style={{
+                        backgroundColor: 'var(--color-brand-surface)',
+                        color: 'var(--color-brand-700)',
+                      }}
+                      title={tx.events.name}
+                    >
+                      <Pin className="w-2.5 h-2.5" />
+                      {tx.events.name.length > 14 ? tx.events.name.slice(0, 14) + '…' : tx.events.name}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--color-text-tertiary)' }}>
                   {subtitle}
                 </p>
                 {tx.description && (
-                  <p className="text-xs text-slate-400 mt-1 italic">
-                    &quot;{tx.description}&quot;
+                  <p className="text-xs italic mt-0.5 truncate" style={{ color: 'var(--color-text-disabled)' }}>
+                    "{tx.description}"
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center justify-between w-full sm:w-auto gap-4">
-              <div className="text-left sm:text-right">
-                <p className={`font-black text-lg sm:text-xl tracking-tight ${isTransfer ? 'text-blue-600 dark:text-blue-400' : isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'}`}>
-                  {!isTransfer && (isIncome ? '+' : '-')} {formatRupiah(Number(tx.amount))}
-                </p>
-              </div>
+            {/* Right: amount + delete */}
+            <div className="flex items-center gap-3 shrink-0">
+              <p
+                className="font-black text-sm sm:text-base nums"
+                style={{ color: cfg.amountColor }}
+              >
+                {cfg.prefix}{formatRupiah(amount)}
+              </p>
 
-              {/* Action Bullets - Only visible on hover/focus on desktop, but always visible on mobile */}
-              <button 
-                onClick={() => setTransactionToDelete(tx)}
+              <button
+                onClick={() => setToDelete(tx)}
                 disabled={isDeletingId === tx.id}
-                className="p-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 disabled:opacity-50"
+                className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 active:scale-95 disabled:opacity-30"
+                style={{
+                  color: 'var(--color-text-disabled)',
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.color = 'var(--color-expense-600)';
+                  el.style.backgroundColor = 'var(--color-expense-surface)';
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget as HTMLElement;
+                  el.style.color = 'var(--color-text-disabled)';
+                  el.style.backgroundColor = 'transparent';
+                }}
                 title="Hapus Transaksi"
               >
-                {isDeletingId === tx.id ? <div className="w-5 h-5 border-2 border-red-500 border-t-transparent rounded-full animate-spin"/> : <Trash2 className="w-5 h-5" />}
+                {isDeletingId === tx.id
+                  ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  : <Trash2 className="w-4 h-4" />
+                }
               </button>
             </div>
-
           </div>
         );
       })}

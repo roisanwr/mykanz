@@ -770,3 +770,191 @@
     transition: none !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   13. PHASE 7 — MICRO-INTERACTIONS & TYPOGRAPHY POLISH
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Nav icon: scale + tilt on hover for kinetic feel ── */
+.nav-item .nav-icon {
+  transition: transform var(--duration-fast) var(--ease-out-expo);
+}
+.nav-item:hover .nav-icon,
+.nav-item.active .nav-icon {
+  transform: scale(1.18);
+}
+
+/* ── card-interactive: press feedback ── */
+.card-interactive:active {
+  transform: translateY(-1px) scale(0.996);
+  box-shadow: var(--shadow-md);
+  transition-duration: 60ms;
+}
+
+/* ── Focus-visible: crisp keyboard ring ── */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Input: hover border + filled bg on focus ── */
+.input:hover:not(:focus) {
+  border-color: var(--color-border-strong);
+}
+.input:focus {
+  background-color: var(--color-bg-surface);
+}
+
+/* ── Inline links: slide-in underline ── */
+.link-underline {
+  position: relative;
+  text-decoration: none;
+  color: var(--color-brand-600);
+}
+.link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background-color: currentColor;
+  transition: width var(--duration-normal) var(--ease-out-expo);
+}
+.link-underline:hover::after { width: 100%; }
+
+/* ── Typography: display heading ── */
+.heading-display {
+  font-family:           var(--font-display);
+  font-weight:           900;
+  letter-spacing:        -0.03em;
+  line-height:           1.1;
+  text-rendering:        optimizeLegibility;
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+}
+.heading-section {
+  font-family:    var(--font-display);
+  font-weight:    700;
+  letter-spacing: -0.02em;
+  line-height:    1.25;
+}
+
+/* ── Stat value: large financial number ── */
+.stat-value {
+  font-family:           var(--font-display);
+  font-weight:           900;
+  font-variant-numeric:  tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing:        -0.03em;
+  line-height:           1;
+}
+
+/* ── Label uppercase ── */
+.label-upper {
+  font-size:      var(--text-2xs);
+  font-weight:    700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color:          var(--color-text-tertiary);
+}
+
+/* ── Progress bar animated fill ── */
+.progress-bar-fill {
+  transition: width 1.2s var(--ease-out-expo);
+}
+
+/* ── Shimmer loading on buttons ── */
+@keyframes btn-shimmer {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(250%)  skewX(-12deg); }
+}
+.btn-loading {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.75;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, oklch(1 0 0 / 0.18) 50%, transparent 100%);
+  animation: btn-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ── Danger & wealth button variants ── */
+.btn-danger {
+  background-color: var(--color-expense-500);
+  color: #fff;
+  box-shadow: 0 1px 3px oklch(0.62 0.200 23 / 0.25);
+}
+.btn-danger:hover {
+  background-color: var(--color-expense-600);
+  box-shadow: 0 6px 20px oklch(0.62 0.200 23 / 0.35);
+  transform: translateY(-1px);
+}
+.btn-danger:active { transform: scale(0.97); box-shadow: none; }
+
+.btn-wealth {
+  background-color: var(--color-wealth-500);
+  color: #fff;
+  box-shadow: 0 1px 3px oklch(0.64 0.185 152 / 0.25);
+}
+.btn-wealth:hover {
+  background-color: var(--color-wealth-600);
+  box-shadow: 0 6px 20px oklch(0.64 0.185 152 / 0.35);
+  transform: translateY(-1px);
+}
+
+/* ── Icon-only button ── */
+.btn-icon {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  border-radius:   var(--radius-md);
+  padding:         0.5rem;
+  color:           var(--color-text-tertiary);
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    color            var(--duration-fast) var(--ease-out-expo),
+    transform        var(--duration-instant) var(--ease-spring);
+}
+.btn-icon:hover  { background-color: var(--color-bg-sunken); color: var(--color-text-primary); transform: scale(1.1); }
+.btn-icon:active { transform: scale(0.92); }
+
+/* ── Select: custom dropdown arrow ── */
+select.input {
+  appearance:          none;
+  background-image:    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:   no-repeat;
+  background-position: right 0.6rem center;
+  padding-right:       2.25rem;
+}
+
+/* ── Pure CSS tooltip ── */
+[data-tooltip] { position: relative; }
+[data-tooltip]::before {
+  content:        attr(data-tooltip);
+  position:       absolute;
+  bottom:         calc(100% + 6px);
+  left:           50%;
+  transform:      translateX(-50%) scale(0.9);
+  white-space:    nowrap;
+  background-color: oklch(0.16 0.02 250);
+  color:          #fff;
+  font-size:      var(--text-2xs);
+  font-weight:    600;
+  padding:        0.25rem 0.6rem;
+  border-radius:  var(--radius-sm);
+  opacity:        0;
+  pointer-events: none;
+  transition:
+    opacity   var(--duration-fast) var(--ease-out-expo),
+    transform var(--duration-fast) var(--ease-out-expo);
+  z-index: 9999;
+}
+[data-tooltip]:hover::before {
+  opacity:   1;
+  transform: translateX(-50%) scale(1);
+}

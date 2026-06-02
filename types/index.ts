@@ -40,7 +40,7 @@ export interface FiatTransaction {
   transaction_type: TxType;
   amount:           number;
   description?:     string | null;
-  transaction_date: Date | string;
+  transaction_date: Date | string | null;
   wallet_id:        string;
   to_wallet_id?:    string | null;
   category_id?:     string | null;

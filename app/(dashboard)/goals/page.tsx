@@ -7,6 +7,8 @@ import AddGoalModal from '@/components/AddGoalModal';
 import AddFundsModal from '@/components/AddFundsModal';
 import GoalCardActions from '@/components/GoalCardActions';
 import { EmptyState } from '@/components/shared/EmptyState';
+import StaggerReveal from '@/components/shared/StaggerReveal';
+import MotionSection from '@/components/shared/MotionSection';
 
 export default async function GoalsPage() {
   const session = await auth();
@@ -80,6 +82,7 @@ export default async function GoalsPage() {
     <div className="space-y-5">
 
       {/* ── HEADER ─────────────────────────────────────────────────────── */}
+      <MotionSection>
       <div
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 rounded-xl p-5 sm:p-6"
         style={{
@@ -109,6 +112,7 @@ export default async function GoalsPage() {
         </div>
         <AddGoalModal assets={assets} />
       </div>
+      </MotionSection>
 
       {/* ── GOAL GRID ──────────────────────────────────────────────────── */}
       {processedGoals.length === 0 ? (
@@ -118,7 +122,7 @@ export default async function GoalsPage() {
           description="Punya keinginan nyicil rumah? Beli kendaraan? Atau akumulasi 1 BTC? Buat target pertamamu sekarang!"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        <StaggerReveal className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" stagger={0.06}>
           {processedGoals.map((goal) => {
             const isCompleted = goal.progress >= 100;
 
@@ -275,7 +279,7 @@ export default async function GoalsPage() {
               </div>
             );
           })}
-        </div>
+        </StaggerReveal>
       )}
 
     </div>

@@ -716,3 +716,57 @@
     scroll-behavior:           auto   !important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   11. VIEW TRANSITIONS API — Progressive enhancement for navigation
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Fade cross-dissolve for page root */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration:        250ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+::view-transition-old(root) {
+  animation-name: vt-fade-out;
+}
+::view-transition-new(root) {
+  animation-name: vt-fade-in;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+@keyframes vt-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Sidebar logo / hero — assign view-transition-name so it morphs between pages */
+.vt-brand-logo      { view-transition-name: brand-logo; }
+.vt-page-header     { view-transition-name: page-header; }
+.vt-hero-section    { view-transition-name: hero-section; }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   12. STAGGER SYSTEM — CSS fallback for JS-disabled environments
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Used by StaggerReveal when IntersectionObserver fires */
+.stagger-item {
+  /* JS sets opacity:0 + transform; this is the resting state */
+  opacity: 1;
+  transform: none;
+}
+
+/* For no-JS / prefers-reduced-motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}

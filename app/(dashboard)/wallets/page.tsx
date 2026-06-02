@@ -1,4 +1,3 @@
-// app/(dashboard)/wallets/page.tsx
 import { Plus, CreditCard, Banknote, Smartphone, Wallet as WalletIcon } from 'lucide-react';
 import { TrendingUp } from 'lucide-react';
 import prisma from '@/lib/prisma';
@@ -7,6 +6,8 @@ import { redirect } from 'next/navigation';
 import AddWalletModal from '@/components/AddWalletModal';
 import WalletCardActions from '@/components/WalletCardActions';
 import { EmptyState } from '@/components/shared/EmptyState';
+import MotionSection from '@/components/shared/MotionSection';
+import StaggerReveal from '@/components/shared/StaggerReveal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const formatRupiah = (n: number) =>
@@ -70,6 +71,7 @@ export default async function WalletsPage() {
       </div>
 
       {/* ── HERO BALANCE CARD ──────────────────────────────────────────── */}
+      <MotionSection>
       <div
         className="relative overflow-hidden rounded-xl p-7 sm:p-10 text-white"
         style={{
@@ -113,6 +115,7 @@ export default async function WalletsPage() {
           </div>
         </div>
       </div>
+      </MotionSection>
 
       {/* ── WALLET GRID ────────────────────────────────────────────────── */}
       <div>
@@ -132,7 +135,7 @@ export default async function WalletsPage() {
             ctaHref="#"
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <StaggerReveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {walletsData.map((wallet) => (
               <div
                 key={wallet.id}
@@ -213,7 +216,7 @@ export default async function WalletsPage() {
                 Tambah Dompet
               </p>
             </div>
-          </div>
+          </StaggerReveal>
         )}
       </div>
 

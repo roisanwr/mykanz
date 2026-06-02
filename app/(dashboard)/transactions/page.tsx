@@ -9,6 +9,8 @@ import TransactionFilters from '@/components/TransactionFilters';
 import { TrendingDown, TrendingUp, ArrowLeftRight, FilterX, Plus, Receipt } from 'lucide-react';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { EmptyState } from '@/components/shared/EmptyState';
+import StaggerReveal from '@/components/shared/StaggerReveal';
+import MotionSection from '@/components/shared/MotionSection';
 
 const PAGE_SIZE = 50;
 
@@ -154,7 +156,7 @@ export default async function TransactionsPage(props: {
       </div>
 
       {/* ── SUMMARY STAT CARDS ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+      <StaggerReveal className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <MetricCard
           label="Total Pemasukan"
           value={formatRupiah(totalIncome)}
@@ -177,7 +179,7 @@ export default async function TransactionsPage(props: {
           icon={ArrowLeftRight}
           variant={net >= 0 ? 'wealth' : 'expense'}
         />
-      </div>
+      </StaggerReveal>
 
       {/* ── FILTERS ────────────────────────────────────────────────────── */}
       <TransactionFilters categories={categories} wallets={wallets} />

@@ -12,6 +12,8 @@ import LiveNetWorth from '@/components/LiveNetWorth';
 import { MetricCard } from '@/components/shared/MetricCard';
 import { SectionCard } from '@/components/shared/SectionCard';
 import { EmptyState } from '@/components/shared/EmptyState';
+import StaggerReveal from '@/components/shared/StaggerReveal';
+import MotionSection from '@/components/shared/MotionSection';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const fmtRupiah = (n: number) =>
@@ -164,7 +166,7 @@ export default async function DashboardPage() {
       {/* ════════════════════════════════════════════════════════════════════
           2. METRIC CARDS — using unified MetricCard component
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <StaggerReveal className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <MetricCard
           label="Tunai & Bank"
           value={fmtRupiah(totalCash)}
@@ -193,13 +195,13 @@ export default async function DashboardPage() {
           icon={TrendingDown}
           variant="expense"
         />
-      </div>
+      </StaggerReveal>
 
       {/* ════════════════════════════════════════════════════════════════════
           3. LIVE NET WORTH cards (realtime) — Client Components
           Note: MetricCard above shows SSR values, LiveNetWorth shows live
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      <StaggerReveal className="grid grid-cols-2 gap-3 sm:gap-4" delay={0.05}>
         <div className="metric-card p-5">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-wealth-surface)' }}>
@@ -224,21 +226,24 @@ export default async function DashboardPage() {
           <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
           <p className="mt-2 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Real-time harga aset</p>
         </div>
-      </div>
+      </StaggerReveal>
 
       {/* ════════════════════════════════════════════════════════════════════
           4. CHARTS
       ════════════════════════════════════════════════════════════════════ */}
+      <MotionSection delay={0.05}>
       <DashboardCharts
         income={monthlyIncome}
         expense={monthlyExpense}
         cash={totalCash}
         investments={totalInvestment}
       />
+      </MotionSection>
 
       {/* ════════════════════════════════════════════════════════════════════
           5. BOTTOM: Recent Transactions + Wealth Distribution
       ════════════════════════════════════════════════════════════════════ */}
+      <MotionSection delay={0.08}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
 
         {/* ── Recent Transactions (2/3) using SectionCard ─────────────── */}
@@ -446,6 +451,7 @@ export default async function DashboardPage() {
         </SectionCard>
 
       </div>
+      </MotionSection>
     </div>
   );
 }

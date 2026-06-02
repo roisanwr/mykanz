@@ -1,4 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
+﻿/* ═══════════════════════════════════════════════════════════════════
    app/globals.css
    MyKanz Design System — Anti-AI-Slop Edition v2.0
    
@@ -201,48 +201,55 @@
    karena OKLCH perceptually uniform = contrast otomatis aman
    ═══════════════════════════════════════════════════════════════════ */
 .dark {
-  /* Backgrounds — Rich dark, tidak flat hitam */
-  --color-bg-base:      oklch(0.145 0.018 250); /* Latar utama: cool dark navy */
-  --color-bg-surface:   oklch(0.195 0.020 255); /* Card surface: sedikit lebih terang */
-  --color-bg-elevated:  oklch(0.230 0.022 255); /* Elevated: dropdown, tooltip */
-  --color-bg-sunken:    oklch(0.115 0.015 250); /* Input bg, sunken panel */
-  --color-bg-overlay:   oklch(0 0 0 / 0.65);    /* Modal backdrop (lebih gelap) */
+  /* ── Backgrounds — Warm slate, bukan pitch black ──────────────────
+     Prinsip: background paling gelap L=0.18, card L=0.24, elevated L=0.29
+     Ini memastikan ada jarak visual yang cukup antar layer,
+     tapi tidak terasa terlalu kontras/gelap seperti void hitam.
+  ── */
+  --color-bg-base:      oklch(0.18 0.012 255);  /* Latar: charcoal navy yang comfortable */
+  --color-bg-surface:   oklch(0.24 0.015 258);  /* Card: satu step lebih terang dari base */
+  --color-bg-elevated:  oklch(0.29 0.016 258);  /* Dropdown, tooltip, hover state */
+  --color-bg-sunken:    oklch(0.15 0.010 252);  /* Input bg: sedikit lebih gelap dari base */
+  --color-bg-overlay:   oklch(0 0 0 / 0.55);    /* Modal backdrop */
 
-  /* Borders */
-  --color-border:        oklch(0.28 0.020 255);  /* Default border */
-  --color-border-strong: oklch(0.38 0.025 255);  /* Focus, active */
-  --color-border-subtle: oklch(0.22 0.015 255);  /* Dividers */
+  /* ── Borders — Cukup terlihat tapi tidak harsh ── */
+  --color-border:        oklch(0.34 0.018 258);  /* Border umum: visible tapi soft */
+  --color-border-strong: oklch(0.44 0.022 258);  /* Border aktif / focus */
+  --color-border-subtle: oklch(0.27 0.012 255);  /* Divider halus */
 
-  /* Text — High contrast di dark background */
-  --color-text-primary:   oklch(0.95 0.005 80);  /* Hampir putih, warm tinted */
-  --color-text-secondary: oklch(0.72 0.010 80);  /* Body text */
-  --color-text-tertiary:  oklch(0.52 0.010 80);  /* Captions */
-  --color-text-disabled:  oklch(0.38 0.008 80);  /* Disabled */
-  --color-text-on-brand:  oklch(1 0 0);          /* Sama */
+  /* ── Text ── */
+  --color-text-primary:   oklch(0.93 0.006 75);  /* Hampir putih, sedikit warm */
+  --color-text-secondary: oklch(0.74 0.010 75);  /* Body: readable, tidak pucat */
+  --color-text-tertiary:  oklch(0.56 0.009 75);  /* Meta, caption */
+  --color-text-disabled:  oklch(0.42 0.007 75);  /* Disabled */
+  --color-text-on-brand:  oklch(1 0 0);
 
-  /* Interactive */
-  --color-focus-ring: oklch(0.78 0.185 47 / 0.6); /* Sedikit lebih bright di dark */
+  /* ── Focus ring ── */
+  --color-focus-ring: oklch(0.78 0.185 47 / 0.55);
 
-  /* Semantic Surfaces (dark) — transparan overlay di dark surface */
-  --color-brand-surface:   oklch(0.70 0.185 47 / 0.12);  /* Brand tint di dark */
-  --color-wealth-surface:  oklch(0.64 0.185 152 / 0.12); /* Wealth tint */
-  --color-expense-surface: oklch(0.62 0.200 23 / 0.12);  /* Expense tint */
-  --color-invest-surface:  oklch(0.58 0.185 265 / 0.12); /* Invest tint */
+  /* ── Semantic Surfaces (dark) ─────────────────────────────────────
+     Naikkan opacity sedikit (0.15 → 0.18) biar lebih terlihat di background gelap.
+     Warna brand/wealth/expense tetap sama, hanya surface tintnya yang lebih terbaca.
+  ── */
+  --color-brand-surface:   oklch(0.70 0.185 47  / 0.16);
+  --color-wealth-surface:  oklch(0.64 0.185 152 / 0.16);
+  --color-expense-surface: oklch(0.62 0.200 23  / 0.16);
+  --color-invest-surface:  oklch(0.58 0.185 265 / 0.16);
 
-  /* Shadows — lebih kuat di dark mode untuk depth */
-  --shadow-xs:    0 1px 2px oklch(0 0 0 / 0.20);
-  --shadow-sm:    0 1px 3px oklch(0 0 0 / 0.28),
+  /* ── Shadows — lebih warm, bukan pure black ── */
+  --shadow-xs:    0 1px 2px oklch(0 0 0 / 0.22);
+  --shadow-sm:    0 1px 3px oklch(0 0 0 / 0.30),
                   0 1px 2px oklch(0 0 0 / 0.18);
-  --shadow-md:    0 4px 6px  oklch(0 0 0 / 0.30),
+  --shadow-md:    0 4px 8px  oklch(0 0 0 / 0.32),
                   0 2px 4px  oklch(0 0 0 / 0.20);
-  --shadow-lg:    0 10px 15px oklch(0 0 0 / 0.35),
-                  0 4px 6px   oklch(0 0 0 / 0.22);
-  --shadow-xl:    0 20px 25px oklch(0 0 0 / 0.40),
-                  0 8px 10px  oklch(0 0 0 / 0.28);
-  --shadow-brand: 0 4px 24px oklch(0.70 0.185 47 / 0.40); /* Lebih glowing di dark */
-  --shadow-wealth: 0 4px 20px oklch(0.64 0.185 152 / 0.35);
-  --shadow-card-hover: 0 8px 28px oklch(0 0 0 / 0.38),
-                       0 3px 8px  oklch(0 0 0 / 0.22);
+  --shadow-lg:    0 10px 20px oklch(0 0 0 / 0.35),
+                  0 4px  8px  oklch(0 0 0 / 0.22);
+  --shadow-xl:    0 20px 30px oklch(0 0 0 / 0.40),
+                  0 8px  12px oklch(0 0 0 / 0.25);
+  --shadow-brand:  0 4px 24px oklch(0.70 0.185 47  / 0.45);
+  --shadow-wealth: 0 4px 20px oklch(0.64 0.185 152 / 0.38);
+  --shadow-card-hover: 0 8px 24px oklch(0 0 0 / 0.36),
+                       0 3px 8px  oklch(0 0 0 / 0.20);
 }
 
 

@@ -92,10 +92,10 @@
   /* ── Radius Scale — SATU sumber kebenaran, tidak ada lagi rounded-none vs rounded-2xl ── */
   --radius-xs:   2px;    /* micro: badges, chips, tags kecil */
   --radius-sm:   4px;    /* kecil: input, button-sm, pills */
-  --radius-md:   6px;   /* standar: buttons, inputs, cards kecil */
-  --radius-lg:   8px;   /* cards utama, metric cards */
-  --radius-xl:   8px;   /* panels besar, sidebar, modals */
-  --radius-2xl:  8px;   /* header, large containers */
+  --radius-md:   4px;   /* standar: buttons, inputs, cards kecil */
+  --radius-lg:   4px;   /* cards utama, metric cards */
+  --radius-xl:   4px;   /* panels besar, sidebar, modals */
+  --radius-2xl:  4px;   /* header, large containers */
   --radius-full: 9999px; /* pills, avatars, badges bulat */
 
   /* ── Spacing Scale (4pt grid) ── */

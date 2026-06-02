@@ -3,10 +3,9 @@
 import { useLivePrices } from '@/lib/useLivePrices';
 import { useEffect, useState, useRef } from 'react';
 import { Activity, TrendingUp, TrendingDown } from 'lucide-react';
-import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 
-// ── Format helpers ────────────────────────────────────────────────────────────
+// ── Format ───────────────────────────────────────────────────────────────────
 const formatRupiah = (v: number) =>
   new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -31,9 +30,9 @@ export default function LiveNetWorth({
 }: LiveNetWorthProps) {
   const { netWorth, isValidating, updatedAt } = useLivePrices();
   const [flashClass, setFlashClass] = useState('');
-  const prevValueRef = useRef<number>(0);
-  const amountRef    = useRef<HTMLElement>(null);
-  const hasAnimated  = useRef(false);
+  const prevValueRef  = useRef<number>(0);
+  const amountRef     = useRef<HTMLElement | null>(null);
+  const hasAnimated   = useRef(false);
 
   const cash        = netWorth.cash       || initialCash;
   const investment  = netWorth.investment || initialInvestment;
@@ -42,27 +41,26 @@ export default function LiveNetWorth({
     show === 'investment' ? investment :
     cash + investment;
 
-  // ── Counter animation on first mount ─────────────────────────────────────
-  useGSAP(() => {
-    if (hasAnimated.current || !amountRef.current) return;
+  // ── Counter animation on first mount (plain useEffect, no useGSAP) ──────────
+  useEffect(() => {
+    if (hasAnimated.current) return;
+    const el = amountRef.current;
+    if (!el || displayValue === 0) return;
+
     hasAnimated.current = true;
-
-    const el = amountRef.current as HTMLElement;
-    const target = displayValue;
-
-    // Start from 0 and count up to target
     const obj = { val: 0 };
     gsap.to(obj, {
-      val: target,
+      val: displayValue,
       duration: variant === 'hero' ? 1.4 : 0.9,
       ease: 'power3.out',
-      onUpdate: () => {
-        el.textContent = formatRupiah(Math.round(obj.val));
+      onUpdate() {
+        if (el) el.textContent = formatRupiah(Math.round(obj.val));
       },
     });
-  }, { dependencies: [], scope: amountRef });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — only on mount
 
-  // ── Flash on live price change ─────────────────────────────────────────────
+  // ── Flash on live price change ───────────────────────────────────────────────
   useEffect(() => {
     if (prevValueRef.current === 0) {
       prevValueRef.current = displayValue;
@@ -70,7 +68,6 @@ export default function LiveNetWorth({
     }
     if (displayValue > prevValueRef.current) setFlashClass('price-flash-up');
     else if (displayValue < prevValueRef.current) setFlashClass('price-flash-down');
-
     prevValueRef.current = displayValue;
     const t = setTimeout(() => setFlashClass(''), 1500);
     return () => clearTimeout(t);
@@ -81,17 +78,14 @@ export default function LiveNetWorth({
     show === 'investment' ? 'Nilai Portofolio' :
     'Total Kekayaan Bersih';
 
-  // ── CARD VARIANT ─────────────────────────────────────────────────────────
+  // ── CARD VARIANT ─────────────────────────────────────────────────────────────
   if (variant === 'card') {
     return (
       <div className="relative">
         <span
-          ref={amountRef as React.RefObject<HTMLSpanElement>}
+          ref={el => { amountRef.current = el; }}
           className={`nums font-black tracking-tight transition-colors duration-500 ${flashClass}`}
-          style={{
-            fontSize: 'var(--text-2xl)',
-            color: 'var(--color-text-primary)',
-          }}
+          style={{ fontSize: 'var(--text-2xl)', color: 'var(--color-text-primary)' }}
         >
           {formatRupiah(displayValue)}
         </span>
@@ -105,10 +99,10 @@ export default function LiveNetWorth({
     );
   }
 
-  // ── HERO VARIANT ─────────────────────────────────────────────────────────
+  // ── HERO VARIANT ─────────────────────────────────────────────────────────────
   return (
     <div>
-      {/* Live indicator label */}
+      {/* Live indicator row */}
       <div className="flex items-center gap-2.5 mb-3">
         <span className="relative flex h-2 w-2">
           <span
@@ -120,29 +114,22 @@ export default function LiveNetWorth({
             style={{ backgroundColor: 'var(--color-wealth-400)' }}
           />
         </span>
-        <p
-          className="text-xs font-bold uppercase tracking-[0.18em]"
-          style={{ color: 'oklch(0.85 0.06 55)' }}
-        >
+        <p className="text-xs font-bold uppercase tracking-[0.18em]" style={{ color: 'oklch(0.85 0.06 55)' }}>
           {label || defaultLabel}
         </p>
         {updatedAt && (
           <span
             className="ml-2 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-full"
-            style={{
-              backgroundColor: 'oklch(1 0 0 / 0.1)',
-              color: 'oklch(0.88 0.05 55)',
-            }}
-            aria-label="Data real-time"
+            style={{ backgroundColor: 'oklch(1 0 0 / 0.1)', color: 'oklch(0.88 0.05 55)' }}
           >
             LIVE
           </span>
         )}
       </div>
 
-      {/* Main amount */}
+      {/* Amount */}
       <h1
-        ref={amountRef as React.RefObject<HTMLHeadingElement>}
+        ref={el => { amountRef.current = el; }}
         className={`font-display font-black tracking-tight leading-none text-white transition-colors duration-500 nums ${flashClass}`}
         style={{ fontSize: 'clamp(2rem, 4vw + 1rem, 3.75rem)' }}
         title={formatRupiah(displayValue)}
@@ -150,28 +137,15 @@ export default function LiveNetWorth({
         {formatRupiah(displayValue)}
       </h1>
 
-      {/* Sub breakdown */}
+      {/* Sub-breakdown */}
       <div className="flex items-center gap-4 mt-3 flex-wrap">
-        <span
-          className="flex items-center gap-1.5 text-xs font-medium"
-          style={{ color: 'oklch(0.75 0.05 55)' }}
-        >
-          <TrendingUp
-            style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-wealth-400)' }}
-          />
+        <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'oklch(0.75 0.05 55)' }}>
+          <TrendingUp style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-wealth-400)' }} />
           Kas: {formatRupiah(cash)}
         </span>
-        <span
-          className="w-px h-3 opacity-30"
-          style={{ backgroundColor: 'oklch(0.85 0 0)' }}
-        />
-        <span
-          className="flex items-center gap-1.5 text-xs font-medium"
-          style={{ color: 'oklch(0.75 0.05 55)' }}
-        >
-          <TrendingDown
-            style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-brand-400)' }}
-          />
+        <span className="w-px h-3 opacity-30" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
+        <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: 'oklch(0.75 0.05 55)' }}>
+          <TrendingDown style={{ width: '0.875rem', height: '0.875rem', color: 'var(--color-brand-400)' }} />
           Investasi: {formatRupiah(investment)}
         </span>
         {updatedAt && (

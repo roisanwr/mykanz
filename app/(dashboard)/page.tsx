@@ -9,6 +9,9 @@ import {
 } from 'lucide-react';
 import DashboardCharts from '@/components/DashboardCharts';
 import LiveNetWorth from '@/components/LiveNetWorth';
+import { MetricCard } from '@/components/shared/MetricCard';
+import { SectionCard } from '@/components/shared/SectionCard';
+import { EmptyState } from '@/components/shared/EmptyState';
 
 // ── Formatters ────────────────────────────────────────────────────────────────
 const fmtRupiah = (n: number) =>
@@ -37,7 +40,7 @@ function relativeDate(date: Date | null | undefined): string {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// PAGE COMPONENT
+// PAGE COMPONENT (Server Component — NO event handlers allowed here)
 // ═══════════════════════════════════════════════════════════════════════════════
 export default async function DashboardPage() {
   const session = await auth();
@@ -75,27 +78,30 @@ export default async function DashboardPage() {
   ]);
 
   const totalCash = Number(walletsRaw[0]?.total_balance || 0);
-  const totalInvestment = portfolios.reduce((acc, p) =>
-    acc + Number(p.total_units || 0) * Number(p.average_buy_price || 0), 0);
+  const totalInvestment = portfolios.reduce(
+    (acc: number, p: { total_units: unknown; average_buy_price: unknown }) =>
+      acc + Number(p.total_units || 0) * Number(p.average_buy_price || 0),
+    0
+  );
 
-  let monthlyIncome = 0;
+  let monthlyIncome  = 0;
   let monthlyExpense = 0;
-  monthlyTxs.forEach(tx => {
+  monthlyTxs.forEach((tx: { transaction_type: unknown; amount: unknown }) => {
     const a = Number(tx.amount || 0);
     if (tx.transaction_type === 'PEMASUKAN')   monthlyIncome  += a;
     if (tx.transaction_type === 'PENGELUARAN') monthlyExpense += a;
   });
 
-  const netWorth = totalCash + totalInvestment;
-  const cashflow = monthlyIncome - monthlyExpense;
+  const netWorth     = totalCash + totalInvestment;
+  const cashflow     = monthlyIncome - monthlyExpense;
   const currentMonth = namaBulan();
 
   return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-700" style={{ animationTimingFunction: 'var(--ease-out-expo)' }}>
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-700"
+      style={{ animationTimingFunction: 'var(--ease-out-expo)' }}>
 
       {/* ════════════════════════════════════════════════════════════════════
           1. HERO — Net Worth
-          Layered: base dark → radial glow → noise grain → content
       ════════════════════════════════════════════════════════════════════ */}
       <div
         className="relative overflow-hidden rounded-xl p-7 sm:p-10"
@@ -107,7 +113,7 @@ export default async function DashboardPage() {
           `,
         }}
       >
-        {/* Subtle grid texture overlay */}
+        {/* Dot grid texture */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -115,15 +121,13 @@ export default async function DashboardPage() {
             backgroundSize: '24px 24px',
           }}
         />
-
         {/* Top accent line */}
         <div
-          className="absolute top-0 left-0 right-0 h-px"
+          className="absolute top-0 left-0 right-0 h-px pointer-events-none"
           style={{ background: 'linear-gradient(90deg, transparent, oklch(0.70 0.185 47 / 0.6), transparent)' }}
         />
 
         <div className="relative z-10 flex flex-col xl:flex-row xl:items-end xl:justify-between gap-7">
-          {/* Net Worth display */}
           <div className="flex-1 min-w-0">
             <LiveNetWorth
               initialCash={totalCash}
@@ -132,23 +136,20 @@ export default async function DashboardPage() {
               show="total"
             />
           </div>
-
-          {/* CTA buttons */}
           <div className="flex gap-3 shrink-0 flex-wrap">
             <Link
               href="/transactions"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white backdrop-blur-sm transition-all duration-200 border"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white backdrop-blur-sm transition-all duration-200 border hover:brightness-110"
               style={{
                 backgroundColor: 'oklch(1 0 0 / 0.08)',
                 borderColor: 'oklch(1 0 0 / 0.15)',
               }}
-              onMouseEnter={undefined}
             >
               <Plus className="w-4 h-4" /> Catat Kas
             </Link>
             <Link
               href="/portfolios/transactions"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-200 hover:brightness-110"
               style={{
                 backgroundColor: 'var(--color-brand-500)',
                 boxShadow: '0 4px 20px oklch(0.70 0.185 47 / 0.4)',
@@ -161,95 +162,72 @@ export default async function DashboardPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          2. METRIC CARDS — 4-column grid
+          2. METRIC CARDS — using unified MetricCard component
       ════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-
-        {/* Tunai & Bank */}
-        <div className="metric-card p-5 group">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div
-              className="p-2 rounded-lg transition-colors duration-200"
-              style={{ backgroundColor: 'var(--color-wealth-surface)', color: 'var(--color-wealth-600)' }}
-            >
-              <Wallet style={{ width: '1rem', height: '1rem' }} />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
-              Tunai & Bank
-            </p>
-          </div>
-          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="cash" />
-          <p className="mt-2.5 text-xs font-medium flex items-center gap-1" style={{ color: 'var(--color-wealth-500)' }}>
-            <TrendingUp style={{ width: '0.75rem', height: '0.75rem' }} />
-            Saldo aktif
-          </p>
-        </div>
-
-        {/* Nilai Portofolio */}
-        <div className="metric-card p-5 group">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div
-              className="p-2 rounded-lg transition-colors duration-200"
-              style={{ backgroundColor: 'var(--color-invest-surface)', color: 'var(--color-invest-600)' }}
-            >
-              <Rocket style={{ width: '1rem', height: '1rem' }} />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
-              Portofolio
-            </p>
-          </div>
-          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
-          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-disabled)' }}>
-            Estimasi nilai beli
-          </p>
-        </div>
-
-        {/* Pemasukan */}
-        <div className="metric-card p-5">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: 'var(--color-wealth-surface)', color: 'var(--color-wealth-600)' }}
-            >
-              <TrendingUp style={{ width: '1rem', height: '1rem' }} />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-wealth-600)' }}>
-              Pemasukan
-            </p>
-          </div>
-          <p className="font-black tracking-tight nums" style={{ fontSize: 'var(--text-2xl)', color: 'var(--color-text-primary)' }}>
-            {fmtRupiah(monthlyIncome)}
-          </p>
-          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-            {currentMonth}
-          </p>
-        </div>
-
-        {/* Pengeluaran */}
-        <div className="metric-card p-5">
-          <div className="flex items-center gap-2.5 mb-3">
-            <div
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: 'var(--color-expense-surface)', color: 'var(--color-expense-600)' }}
-            >
-              <TrendingDown style={{ width: '1rem', height: '1rem' }} />
-            </div>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-expense-600)' }}>
-              Pengeluaran
-            </p>
-          </div>
-          <p className="font-black tracking-tight nums" style={{ fontSize: 'var(--text-2xl)', color: 'var(--color-text-primary)' }}>
-            {fmtRupiah(monthlyExpense)}
-          </p>
-          <p className="mt-2.5 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-            {currentMonth}
-          </p>
-        </div>
-
+        <MetricCard
+          label="Tunai & Bank"
+          value={fmtRupiah(totalCash)}
+          sub="Saldo aktif"
+          icon={Wallet}
+          variant="wealth"
+        />
+        <MetricCard
+          label="Portofolio"
+          value={fmtRupiah(totalInvestment)}
+          sub="Estimasi nilai beli"
+          icon={Rocket}
+          variant="invest"
+        />
+        <MetricCard
+          label="Pemasukan"
+          value={fmtRupiah(monthlyIncome)}
+          sub={currentMonth}
+          icon={TrendingUp}
+          variant="wealth"
+        />
+        <MetricCard
+          label="Pengeluaran"
+          value={fmtRupiah(monthlyExpense)}
+          sub={currentMonth}
+          icon={TrendingDown}
+          variant="expense"
+        />
       </div>
 
       {/* ════════════════════════════════════════════════════════════════════
-          3. CHARTS
+          3. LIVE NET WORTH cards (realtime) — Client Components
+          Note: MetricCard above shows SSR values, LiveNetWorth shows live
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-wealth-surface)' }}>
+              <Wallet style={{ width: '1rem', height: '1rem', color: 'var(--color-wealth-600)' }} />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-wealth-600)' }}>
+              Kas Live
+            </p>
+          </div>
+          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="cash" />
+          <p className="mt-2 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Real-time dari pasar</p>
+        </div>
+        <div className="metric-card p-5">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="p-2 rounded-lg" style={{ backgroundColor: 'var(--color-invest-surface)' }}>
+              <Rocket style={{ width: '1rem', height: '1rem', color: 'var(--color-invest-600)' }} />
+            </div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--color-invest-600)' }}>
+              Portofolio Live
+            </p>
+          </div>
+          <LiveNetWorth initialCash={totalCash} initialInvestment={totalInvestment} variant="card" show="investment" />
+          <p className="mt-2 text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>Real-time harga aset</p>
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          4. CHARTS
       ════════════════════════════════════════════════════════════════════ */}
       <DashboardCharts
         income={monthlyIncome}
@@ -259,239 +237,167 @@ export default async function DashboardPage() {
       />
 
       {/* ════════════════════════════════════════════════════════════════════
-          4. BOTTOM GRID — Recent Transactions + Wealth Distribution
+          5. BOTTOM: Recent Transactions + Wealth Distribution
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
 
-        {/* ── Recent Transactions (2/3 width) ─────────────────────────── */}
-        <div
-          className="lg:col-span-2 rounded-xl p-5 sm:p-6"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-5">
-            <h2
-              className="font-display font-bold flex items-center gap-2"
-              style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}
-            >
-              <span
-                className="p-1.5 rounded-lg"
-                style={{ backgroundColor: 'var(--color-bg-sunken)', color: 'var(--color-text-tertiary)' }}
+        {/* ── Recent Transactions (2/3) using SectionCard ─────────────── */}
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Transaksi Terakhir"
+            titleIcon={Clock}
+            action={
+              <Link
+                href="/transactions"
+                className="text-xs font-bold flex items-center gap-1 group"
+                style={{ color: 'var(--color-brand-500)' }}
               >
-                <Clock style={{ width: '0.875rem', height: '0.875rem' }} />
-              </span>
-              Transaksi Terakhir
-            </h2>
-            <Link
-              href="/transactions"
-              className="text-xs font-bold flex items-center gap-1 transition-colors duration-150 group"
-              style={{ color: 'var(--color-brand-500)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-brand-600)' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--color-brand-500)' }}
-            >
-              Lihat Semua
-              <ArrowRight
-                style={{ width: '0.875rem', height: '0.875rem', transition: 'transform 150ms var(--ease-spring)' }}
-                className="group-hover:translate-x-0.5"
-              />
-            </Link>
-          </div>
+                Lihat Semua
+                <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            }
+          >
+            <div className="space-y-0.5">
+              {recentTxs.length === 0 ? (
+                <EmptyState
+                  icon={Clock}
+                  title="Belum ada transaksi"
+                  description="Mulai catat pemasukan atau pengeluaranmu sekarang"
+                  ctaLabel="Catat Sekarang"
+                  ctaHref="/transactions"
+                  minHeight="200px"
+                />
+              ) : (
+                recentTxs.map((tx: {
+                  id: string;
+                  transaction_type: string;
+                  amount: unknown;
+                  transaction_date: Date | null;
+                  categories: { name: string } | null;
+                  wallets_fiat_transactions_wallet_idTowallets: { name: string };
+                }) => {
+                  const isPemasukan = tx.transaction_type === 'PEMASUKAN';
+                  const isTransfer  = tx.transaction_type === 'TRANSFER';
+                  const amount      = Number(tx.amount || 0);
 
-          {/* List */}
-          <div className="space-y-1">
-            {recentTxs.length === 0 ? (
-              // Empty state
-              <div
-                className="py-12 flex flex-col items-center gap-3 rounded-xl border-2 border-dashed"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-disabled)' }}
-              >
-                <Clock style={{ width: '2rem', height: '2rem', opacity: 0.4 }} />
-                <div className="text-center">
-                  <p className="text-sm font-semibold">Belum ada transaksi</p>
-                  <p className="text-xs mt-1">Mulai catat pemasukan atau pengeluaranmu</p>
-                </div>
-                <Link
-                  href="/transactions"
-                  className="mt-1 px-4 py-2 rounded-lg text-xs font-bold text-white"
-                  style={{ backgroundColor: 'var(--color-brand-500)' }}
-                >
-                  Catat Sekarang
-                </Link>
-              </div>
-            ) : (
-              recentTxs.map((tx) => {
-                const isPemasukan = tx.transaction_type === 'PEMASUKAN';
-                const isTransfer  = tx.transaction_type === 'TRANSFER';
-                const amount      = Number(tx.amount || 0);
-
-                return (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between px-3 py-3 rounded-xl transition-all duration-150 group"
-                    style={{ borderWidth: '1px', borderColor: 'transparent' }}
-                    onMouseEnter={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.backgroundColor = 'var(--color-bg-sunken)';
-                      el.style.borderColor = 'var(--color-border-subtle)';
-                    }}
-                    onMouseLeave={e => {
-                      const el = e.currentTarget as HTMLElement;
-                      el.style.backgroundColor = '';
-                      el.style.borderColor = 'transparent';
-                    }}
-                  >
-                    {/* Left: icon + info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Type icon */}
-                      <div
-                        className="p-2 rounded-xl shrink-0"
-                        style={{
-                          backgroundColor: isPemasukan
-                            ? 'var(--color-wealth-surface)'
-                            : isTransfer
-                            ? 'var(--color-invest-surface)'
-                            : 'var(--color-expense-surface)',
-                          color: isPemasukan
-                            ? 'var(--color-wealth-600)'
-                            : isTransfer
-                            ? 'var(--color-invest-600)'
-                            : 'var(--color-expense-600)',
-                        }}
-                      >
-                        {isPemasukan
-                          ? <ArrowDownRight style={{ width: '1rem', height: '1rem' }} />
-                          : isTransfer
-                          ? <ArrowRight style={{ width: '1rem', height: '1rem' }} />
-                          : <ArrowUpRight style={{ width: '1rem', height: '1rem' }} />
-                        }
-                      </div>
-
-                      {/* Text */}
-                      <div className="min-w-0">
-                        <p
-                          className="text-sm font-semibold truncate transition-colors duration-150"
-                          style={{ color: 'var(--color-text-primary)' }}
+                  return (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between px-3 py-3 rounded-xl transition-colors duration-150 hover:bg-[var(--color-bg-sunken)]"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className="p-2 rounded-xl shrink-0"
+                          style={{
+                            backgroundColor: isPemasukan
+                              ? 'var(--color-wealth-surface)'
+                              : isTransfer
+                              ? 'var(--color-invest-surface)'
+                              : 'var(--color-expense-surface)',
+                            color: isPemasukan
+                              ? 'var(--color-wealth-600)'
+                              : isTransfer
+                              ? 'var(--color-invest-600)'
+                              : 'var(--color-expense-600)',
+                          }}
                         >
-                          {tx.categories?.name || 'Lainnya'}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                          <span
-                            className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
-                            style={{
-                              backgroundColor: 'var(--color-bg-sunken)',
-                              color: 'var(--color-text-tertiary)',
-                            }}
-                          >
-                            {tx.wallets_fiat_transactions_wallet_idTowallets.name}
-                          </span>
-                          <span style={{ color: 'var(--color-text-disabled)', fontSize: '10px' }}>·</span>
-                          <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
-                            {relativeDate(tx.transaction_date)}
-                          </span>
+                          {isPemasukan
+                            ? <ArrowDownRight style={{ width: '1rem', height: '1rem' }} />
+                            : isTransfer
+                            ? <ArrowRight style={{ width: '1rem', height: '1rem' }} />
+                            : <ArrowUpRight style={{ width: '1rem', height: '1rem' }} />
+                          }
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text-primary)' }}>
+                            {tx.categories?.name || 'Lainnya'}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span
+                              className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded"
+                              style={{
+                                backgroundColor: 'var(--color-bg-sunken)',
+                                color: 'var(--color-text-tertiary)',
+                              }}
+                            >
+                              {tx.wallets_fiat_transactions_wallet_idTowallets.name}
+                            </span>
+                            <span style={{ color: 'var(--color-text-disabled)', fontSize: '10px' }}>·</span>
+                            <span className="text-xs" style={{ color: 'var(--color-text-tertiary)' }}>
+                              {relativeDate(tx.transaction_date)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <p
+                        className="text-sm font-black nums shrink-0 pl-3"
+                        style={{
+                          color: isPemasukan ? 'var(--color-wealth-500)' : 'var(--color-text-primary)',
+                        }}
+                      >
+                        {isPemasukan ? '+' : isTransfer ? '' : '−'}{fmtRupiah(amount)}
+                      </p>
                     </div>
-
-                    {/* Right: amount */}
-                    <p
-                      className="text-sm font-black nums shrink-0 pl-3"
-                      style={{
-                        color: isPemasukan
-                          ? 'var(--color-wealth-500)'
-                          : 'var(--color-text-primary)',
-                      }}
-                    >
-                      {isPemasukan ? '+' : isTransfer ? '' : '−'}
-                      {fmtRupiah(amount)}
-                    </p>
-                  </div>
-                );
-              })
-            )}
-          </div>
+                  );
+                })
+              )}
+            </div>
+          </SectionCard>
         </div>
 
-        {/* ── Wealth Distribution (1/3 width) ─────────────────────────── */}
-        <div
-          className="rounded-xl p-5 sm:p-6 flex flex-col"
-          style={{
-            backgroundColor: 'var(--color-bg-surface)',
-            border: '1px solid var(--color-border)',
-            boxShadow: 'var(--shadow-sm)',
-          }}
-        >
-          <h2
-            className="font-display font-bold flex items-center gap-2 mb-5"
-            style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}
-          >
-            <span
-              className="p-1.5 rounded-lg"
-              style={{ backgroundColor: 'var(--color-brand-surface)', color: 'var(--color-brand-600)' }}
-            >
-              <PieIcon style={{ width: '0.875rem', height: '0.875rem' }} />
-            </span>
-            Distribusi
-          </h2>
-
+        {/* ── Wealth Distribution (1/3) using SectionCard ─────────────── */}
+        <SectionCard title="Distribusi" titleIcon={PieIcon}>
           {netWorth === 0 ? (
-            // Empty state
-            <div
-              className="flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-disabled)', minHeight: '140px' }}
-            >
-              <p className="text-sm font-semibold">Belum ada kekayaan</p>
-              <p className="text-xs">Tambah saldo untuk mulai</p>
-            </div>
+            <EmptyState
+              icon={PieIcon}
+              title="Belum ada kekayaan"
+              description="Tambah saldo untuk mulai"
+              minHeight="140px"
+            />
           ) : (
-            <div className="flex-1 flex flex-col gap-5">
+            <div className="space-y-5">
               {/* Segmented bar */}
-              <div>
+              <div
+                className="w-full h-3 rounded-full overflow-hidden flex"
+                style={{ backgroundColor: 'var(--color-bg-sunken)' }}
+              >
                 <div
-                  className="w-full h-3 rounded-full overflow-hidden flex gap-0.5"
-                  style={{ backgroundColor: 'var(--color-bg-sunken)' }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${(totalCash / netWorth) * 100}%`,
-                      backgroundColor: 'var(--color-wealth-500)',
-                      transitionTimingFunction: 'var(--ease-out-expo)',
-                    }}
-                    title={`Kas: ${fmtRupiah(totalCash)}`}
-                  />
-                  <div
-                    className="h-full rounded-full flex-1 transition-all duration-700"
-                    style={{
-                      backgroundColor: 'var(--color-brand-500)',
-                      transitionTimingFunction: 'var(--ease-out-expo)',
-                    }}
-                    title={`Investasi: ${fmtRupiah(totalInvestment)}`}
-                  />
-                </div>
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${(totalCash / netWorth) * 100}%`,
+                    backgroundColor: 'var(--color-wealth-500)',
+                  }}
+                />
+                <div
+                  className="h-full rounded-full flex-1"
+                  style={{ backgroundColor: 'var(--color-brand-500)' }}
+                />
               </div>
 
-              {/* Breakdown rows */}
-              <div className="space-y-2.5">
+              {/* Rows */}
+              <div className="space-y-2">
                 {[
-                  { label: 'Kas Bebas', value: totalCash, pct: (totalCash / netWorth) * 100, color: 'var(--color-wealth-500)', surface: 'var(--color-wealth-surface)', textColor: 'var(--color-wealth-700)' },
-                  { label: 'Investasi', value: totalInvestment, pct: (totalInvestment / netWorth) * 100, color: 'var(--color-brand-500)', surface: 'var(--color-brand-surface)', textColor: 'var(--color-brand-700)' },
+                  {
+                    label: 'Kas Bebas', value: totalCash,
+                    pct: (totalCash / netWorth) * 100,
+                    color: 'var(--color-wealth-500)',
+                  },
+                  {
+                    label: 'Investasi', value: totalInvestment,
+                    pct: (totalInvestment / netWorth) * 100,
+                    color: 'var(--color-brand-500)',
+                  },
                 ].map(item => (
                   <div
                     key={item.label}
-                    className="flex items-center justify-between p-3 rounded-xl transition-colors duration-150"
-                    style={{ backgroundColor: 'var(--color-bg-sunken)', border: '1px solid var(--color-border-subtle)' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = item.color }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--color-border-subtle)' }}
+                    className="flex items-center justify-between p-3 rounded-xl"
+                    style={{
+                      backgroundColor: 'var(--color-bg-sunken)',
+                      border: '1px solid var(--color-border-subtle)',
+                    }}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: item.color }}
-                      />
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
                       <span className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
                         {item.label}
                       </span>
@@ -510,7 +416,7 @@ export default async function DashboardPage() {
 
               {/* Cashflow summary */}
               <div
-                className="mt-auto p-3 rounded-xl"
+                className="p-3 rounded-xl"
                 style={{ backgroundColor: cashflow >= 0 ? 'var(--color-wealth-surface)' : 'var(--color-expense-surface)' }}
               >
                 <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-text-tertiary)' }}>
@@ -523,34 +429,21 @@ export default async function DashboardPage() {
                   {cashflow >= 0 ? '+' : ''}{fmtRupiah(cashflow)}
                 </p>
               </div>
+
+              <Link
+                href="/goals"
+                className="block w-full text-center py-2.5 rounded-xl text-sm font-bold transition-colors duration-150"
+                style={{
+                  backgroundColor: 'var(--color-bg-sunken)',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                }}
+              >
+                Atur Target Impian →
+              </Link>
             </div>
           )}
-
-          {/* CTA */}
-          <Link
-            href="/goals"
-            className="mt-4 w-full text-center py-2.5 rounded-xl text-sm font-bold transition-all duration-150"
-            style={{
-              backgroundColor: 'var(--color-bg-sunken)',
-              border: '1px solid var(--color-border)',
-              color: 'var(--color-text-secondary)',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.backgroundColor = 'var(--color-brand-surface)';
-              el.style.color = 'var(--color-brand-600)';
-              el.style.borderColor = 'var(--color-brand-300)';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.backgroundColor = 'var(--color-bg-sunken)';
-              el.style.color = 'var(--color-text-secondary)';
-              el.style.borderColor = 'var(--color-border)';
-            }}
-          >
-            Atur Target Impian →
-          </Link>
-        </div>
+        </SectionCard>
 
       </div>
     </div>

@@ -2,27 +2,29 @@
 
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
-import { useId } from 'react';
 
 // ── Format ────────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(n);
 
-// ── Brand OKLCH colors (CSS string values) ────────────────────────────────────
-// Dipakai di chart karena Recharts butuh string warna, bukan CSS var()
-const COLORS = {
-  wealth:  'oklch(0.64 0.185 152)',  // wealth-500: emerald
-  brand:   'oklch(0.70 0.185 47)',   // brand-500:  orange
-  expense: 'oklch(0.62 0.200 23)',   // expense-500: rose
-  invest:  'oklch(0.58 0.185 265)',  // invest-500: violet
+// ── Brand OKLCH — must be string values, not CSS vars (Recharts needs literals) ──
+const C = {
+  wealth:  'oklch(0.64 0.185 152)',  // emerald
+  brand:   'oklch(0.70 0.185 47)',   // orange
+  expense: 'oklch(0.62 0.200 23)',   // rose
 };
 
-// ── Custom Tooltip ─────────────────────────────────────────────────────────────
+// ── Custom Tooltip (dark-mode aware via CSS tokens) ───────────────────────────
+interface TooltipPayload {
+  value: number;
+  name?: string;
+  payload?: { fill?: string; name?: string };
+}
 interface CustomTooltipProps {
   active?: boolean;
-  payload?: Array<{ value: number; name: string; payload?: { fill?: string } }>;
+  payload?: TooltipPayload[];
   label?: string;
 }
 
@@ -30,97 +32,74 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div
-      className="rounded-xl px-4 py-3 text-sm font-semibold shadow-xl"
       style={{
         backgroundColor: 'var(--color-bg-elevated)',
         border: '1px solid var(--color-border)',
-        color: 'var(--color-text-primary)',
+        borderRadius: '12px',
+        padding: '10px 14px',
         boxShadow: 'var(--shadow-lg)',
-        minWidth: '160px',
+        minWidth: '140px',
+        color: 'var(--color-text-primary)',
+        fontSize: '13px',
+        fontWeight: 600,
       }}
     >
       {label && (
-        <p style={{ color: 'var(--color-text-tertiary)', fontSize: '0.7rem', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        <p style={{ color: 'var(--color-text-tertiary)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>
           {label}
         </p>
       )}
       {payload.map((entry, i) => (
-        <p key={i} className="flex items-center gap-2">
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {entry.payload?.fill && (
-            <span
-              className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-              style={{ backgroundColor: entry.payload.fill }}
-            />
+            <span style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: entry.payload.fill, flexShrink: 0 }} />
           )}
-          Rp {fmt(entry.value)}
-        </p>
-      ))}
-    </div>
-  );
-}
-
-// ── Custom Legend ─────────────────────────────────────────────────────────────
-interface LegendEntry { color: string; name: string }
-function CustomLegend({ items }: { items: LegendEntry[] }) {
-  return (
-    <div className="flex items-center justify-center gap-5 mt-3 flex-wrap">
-      {items.map(item => (
-        <div key={item.name} className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
-            style={{ backgroundColor: item.color }}
-          />
-          <span className="text-xs font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-            {item.name}
-          </span>
+          <span>Rp {fmt(entry.value)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-// ── Bar gradient defs ─────────────────────────────────────────────────────────
-function GradientDefs() {
-  const idIncome  = 'grad-income';
-  const idExpense = 'grad-expense';
+// ── Legend ────────────────────────────────────────────────────────────────────
+function Legend({ items }: { items: { name: string; color: string }[] }) {
   return (
-    <defs>
-      <linearGradient id={idIncome} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={COLORS.wealth}  stopOpacity={1} />
-        <stop offset="100%" stopColor={COLORS.wealth}  stopOpacity={0.6} />
-      </linearGradient>
-      <linearGradient id={idExpense} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%"   stopColor={COLORS.expense} stopOpacity={1} />
-        <stop offset="100%" stopColor={COLORS.expense} stopOpacity={0.6} />
-      </linearGradient>
-    </defs>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '12px', flexWrap: 'wrap' }}>
+      {items.map(item => (
+        <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color, display: 'inline-block' }} />
+          <span style={{ fontSize: '12px', color: 'var(--color-text-tertiary)', fontWeight: 500 }}>{item.name}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
-// ── Section card wrapper ──────────────────────────────────────────────────────
+// ── Chart Card wrapper ────────────────────────────────────────────────────────
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div
-      className="rounded-xl p-5 sm:p-6"
-      style={{
-        backgroundColor: 'var(--color-bg-surface)',
-        border: '1px solid var(--color-border)',
-        boxShadow: 'var(--shadow-sm)',
-      }}
-    >
-      <h3
-        className="font-display font-bold mb-5 text-center"
-        style={{ fontSize: 'var(--text-base)', color: 'var(--color-text-primary)' }}
-      >
+    <div style={{
+      backgroundColor: 'var(--color-bg-surface)',
+      border: '1px solid var(--color-border)',
+      borderRadius: '16px',
+      padding: '20px 24px',
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      <p style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 700,
+        fontSize: '15px',
+        color: 'var(--color-text-primary)',
+        textAlign: 'center',
+        marginBottom: '20px',
+      }}>
         {title}
-      </h3>
+      </p>
       {children}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
 // ═══════════════════════════════════════════════════════════════════════════════
 interface DashboardChartsProps {
   income: number;
@@ -131,28 +110,26 @@ interface DashboardChartsProps {
 
 export default function DashboardCharts({ income, expense, cash, investments }: DashboardChartsProps) {
 
-  // ── Cashflow bar data ──────────────────────────────────────────────────────
   const cashflowData = [
-    { name: 'Pemasukan',   amount: income,  fill: `url(#grad-income)`,  fillSolid: COLORS.wealth },
-    { name: 'Pengeluaran', amount: expense, fill: `url(#grad-expense)`, fillSolid: COLORS.expense },
+    { name: 'Pemasukan',   amount: income,  fill: C.wealth },
+    { name: 'Pengeluaran', amount: expense, fill: C.expense },
   ];
 
-  // ── Wealth pie data ────────────────────────────────────────────────────────
   const wealthData = [
-    { name: 'Kas & Bank', value: cash,        color: COLORS.wealth },
-    { name: 'Investasi',  value: investments, color: COLORS.brand  },
+    { name: 'Kas & Bank', value: cash,        color: C.wealth },
+    { name: 'Investasi',  value: investments, color: C.brand  },
   ].filter(d => d.value > 0);
 
   const total = cash + investments;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
 
-      {/* ── 1. Alokasi Kekayaan (Donut) ─────────────────────────────────── */}
+      {/* ── Alokasi Kekayaan (Donut) ── */}
       <ChartCard title="Alokasi Kekayaan">
         {wealthData.length > 0 ? (
           <>
-            <div className="h-[220px] w-full relative">
+            <div style={{ height: '220px', position: 'relative' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -167,12 +144,7 @@ export default function DashboardCharts({ income, expense, cash, investments }: 
                     animationDuration={900}
                   >
                     {wealthData.map((entry, i) => (
-                      <Cell
-                        key={i}
-                        fill={entry.color}
-                        stroke="transparent"
-                        strokeWidth={0}
-                      />
+                      <Cell key={i} fill={entry.color} stroke="transparent" />
                     ))}
                   </Pie>
                   <Tooltip
@@ -183,39 +155,42 @@ export default function DashboardCharts({ income, expense, cash, investments }: 
               </ResponsiveContainer>
 
               {/* Center label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text-disabled)' }}>
+              <div style={{
+                position: 'absolute', inset: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                pointerEvents: 'none',
+              }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-disabled)' }}>
                   Total
-                </p>
-                <p className="text-sm font-black nums" style={{ color: 'var(--color-text-primary)' }}>
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 900, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                   {new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(total)}
-                </p>
+                </span>
               </div>
             </div>
-
-            <CustomLegend items={wealthData.map(d => ({ name: d.name, color: d.color }))} />
+            <Legend items={wealthData.map(d => ({ name: d.name, color: d.color }))} />
           </>
         ) : (
-          <div
-            className="h-[220px] flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed"
-            style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-disabled)' }}
-          >
-            <p className="text-sm font-medium">Belum ada data</p>
-            <p className="text-xs">Tambah saldo kas atau investasi</p>
+          <div style={{
+            height: '220px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: '8px', borderRadius: '12px', border: '2px dashed var(--color-border)',
+            color: 'var(--color-text-disabled)',
+          }}>
+            <p style={{ fontSize: '14px', fontWeight: 600 }}>Belum ada data</p>
+            <p style={{ fontSize: '12px' }}>Tambah saldo kas atau investasi</p>
           </div>
         )}
       </ChartCard>
 
-      {/* ── 2. Arus Kas Bulan Ini (Bar) ─────────────────────────────────── */}
+      {/* ── Arus Kas Bulan Ini (Bar) ── */}
       <ChartCard title="Arus Kas Bulan Ini">
-        <div className="h-[260px] w-full">
+        <div style={{ height: '220px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={cashflowData}
               margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
               barCategoryGap="40%"
             >
-              <GradientDefs />
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
@@ -225,27 +200,16 @@ export default function DashboardCharts({ income, expense, cash, investments }: 
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{
-                  fill: 'var(--color-text-tertiary)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
+                tick={{ fill: 'var(--color-text-tertiary)', fontSize: 12, fontWeight: 600 }}
                 dy={8}
               />
               <YAxis hide domain={[0, (max: number) => Math.max(max * 1.2, 100000)]} />
               <Tooltip
-                cursor={{ fill: 'var(--color-bg-sunken)', radius: 8 } as object}
+                cursor={{ fill: 'var(--color-bg-sunken)' }}
                 content={<CustomTooltip />}
                 wrapperStyle={{ outline: 'none' }}
               />
-              <Bar
-                dataKey="amount"
-                radius={[8, 8, 4, 4]}
-                maxBarSize={64}
-                isAnimationActive
-                animationDuration={900}
-                animationEasing="ease-out"
-              >
+              <Bar dataKey="amount" radius={[8, 8, 4, 4]} maxBarSize={64} isAnimationActive animationDuration={900}>
                 {cashflowData.map((entry, i) => (
                   <Cell key={i} fill={entry.fill} />
                 ))}
@@ -255,31 +219,30 @@ export default function DashboardCharts({ income, expense, cash, investments }: 
         </div>
 
         {/* Summary row */}
-        <div className="flex items-center justify-around mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border-subtle)' }}>
-          <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text-disabled)' }}>Pemasukan</p>
-            <p className="text-sm font-black nums mt-0.5" style={{ color: 'var(--color-wealth-500)' }}>
-              +{new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(income)}
-            </p>
-          </div>
-          <div className="w-px h-8" style={{ backgroundColor: 'var(--color-border)' }} />
-          <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text-disabled)' }}>Pengeluaran</p>
-            <p className="text-sm font-black nums mt-0.5" style={{ color: 'var(--color-expense-500)' }}>
-              -{new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(expense)}
-            </p>
-          </div>
-          <div className="w-px h-8" style={{ backgroundColor: 'var(--color-border)' }} />
-          <div className="text-center">
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-text-disabled)' }}>Selisih</p>
-            <p
-              className="text-sm font-black nums mt-0.5"
-              style={{ color: income - expense >= 0 ? 'var(--color-wealth-500)' : 'var(--color-expense-500)' }}
-            >
-              {income - expense >= 0 ? '+' : ''}
-              {new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(income - expense)}
-            </p>
-          </div>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-around',
+          marginTop: '12px', paddingTop: '12px',
+          borderTop: '1px solid var(--color-border-subtle)',
+        }}>
+          {[
+            { label: 'Pemasukan', val: income,            color: C.wealth,  prefix: '+' },
+            { label: 'Pengeluaran', val: expense,         color: C.expense, prefix: '−' },
+            { label: 'Selisih',     val: income - expense, color: income - expense >= 0 ? C.wealth : C.expense, prefix: income - expense >= 0 ? '+' : '' },
+          ].map((item, i, arr) => (
+            <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-text-disabled)' }}>
+                  {item.label}
+                </p>
+                <p style={{ fontSize: '13px', fontWeight: 900, color: item.color, fontVariantNumeric: 'tabular-nums', marginTop: '2px' }}>
+                  {item.prefix}{new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(Math.abs(item.val))}
+                </p>
+              </div>
+              {i < arr.length - 1 && (
+                <div style={{ width: '1px', height: '32px', backgroundColor: 'var(--color-border)', margin: '0 16px' }} />
+              )}
+            </div>
+          ))}
         </div>
       </ChartCard>
 

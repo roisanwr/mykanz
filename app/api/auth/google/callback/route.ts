@@ -24,6 +24,10 @@ export async function GET(req: NextRequest) {
     await handleCallback(code, userId);
     return redirect('/settings?gmail=connected');
   } catch (err: any) {
+    // NEXT_REDIRECT bukan error — itu adalah mekanisme redirect() di Next.js 13+
+    // Jika tidak di-rethrow, catch ini akan menangkap redirect sukses sebagai error!
+    if (err?.digest?.startsWith('NEXT_REDIRECT')) throw err;
+
     console.error('[Gmail Callback] Error:', err);
     const errorMessage = err?.message || 'Unknown error';
     return redirect(`/settings?gmail=error&details=${encodeURIComponent(errorMessage)}`);

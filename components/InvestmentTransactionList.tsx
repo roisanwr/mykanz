@@ -142,7 +142,7 @@ export default function InvestmentTransactionList({ transactions }: { transactio
 
                 {tx.notes && (
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">
-                    "{tx.notes}"
+                    &quot;{tx.notes}&quot;
                   </p>
                 )}
                 

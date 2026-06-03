@@ -59,16 +59,7 @@ export default async function PortfolioTransactionsPage() {
         <AddInvestmentModal assets={assets} wallets={wallets} />
       </div>
 
-      {serializedTransactions.length > 0 && (
-         <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl shadow-sm mt-6">
-           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Riwayat Transaksi</h2>
-           <InvestmentTransactionList transactions={serializedTransactions} />
-         </div>
-      )}
-
-      {serializedTransactions.length === 0 && (
-         <InvestmentTransactionList transactions={[]} />
-      )}
+      <InvestmentTransactionList transactions={serializedTransactions} />
 
     </div>
   );

@@ -22,17 +22,32 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
     setIsLoading(true);
     const form = e.currentTarget;
     const asset_id = (form.elements.namedItem('asset_id') as HTMLSelectElement)?.value;
-    const rawUnits = ((form.elements.namedItem('units') as HTMLInputElement)?.value || '').replace(/\./g, '');
-    const rawPrice = ((form.elements.namedItem('price_per_unit') as HTMLInputElement)?.value || '').replace(/\./g, '');
+    // BUG #5 FIX: Unit TIDAK dihapus titiknya karena bisa fraksional (0.5 BTC)
+    // Hanya ganti koma ke titik untuk desimal
+    const rawUnits = ((form.elements.namedItem('units') as HTMLInputElement)?.value || '')
+      .replace(/,/g, '.');
+    // Harga menggunakan format ribuan IDR → hapus titik pemisah ribuan
+    const rawPrice = ((form.elements.namedItem('price_per_unit') as HTMLInputElement)?.value || '')
+      .replace(/\./g, '').replace(/,/g, '.');
     const transaction_date = (form.elements.namedItem('transaction_date') as HTMLInputElement)?.value;
     const notes = (form.elements.namedItem('notes') as HTMLInputElement)?.value || null;
     const wallet_id = saveToWallet ? (form.elements.namedItem('wallet_id') as HTMLSelectElement)?.value : null;
 
+    const parsedUnits = parseFloat(rawUnits) || 0;
+    const parsedPrice = parseFloat(rawPrice) || 0;
+
+    // BUG #6 FIX: Validasi harga JUAL harus > 0
+    if (activeTab === 'JUAL' && parsedPrice <= 0) {
+      showFeedback('Harga per unit wajib diisi untuk transaksi Jual!', 'error');
+      setIsLoading(false);
+      return;
+    }
+
     const payload: any = {
       transaction_type: activeTab,
       asset_id,
-      units: parseFloat(rawUnits) || 0,
-      price_per_unit: parseFloat(rawPrice) || null,
+      units: parsedUnits,
+      price_per_unit: parsedPrice || null,
       transaction_date,
       notes,
       save_to_wallet: saveToWallet,
@@ -59,18 +74,25 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
     setIsLoading(false);
   };
 
-  // Format IDR function using regex to add dots
-  const formatIDR = (value: string) => {
-    const rawValue = value.replace(/\./g, '');
+  // BUG #5 FIX: Format IDR hanya untuk field HARGA (bukan unit)
+  // Unit bisa fraksional (0.5 BTC) sehingga tidak boleh dihapus titiknya
+  const formatIDRPrice = (value: string) => {
+    // Hanya format angka bulat (tanpa desimal) sebagai ribuan
+    const rawValue = value.replace(/[^0-9]/g, '');
     if (!rawValue) return '';
-    return rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
-  const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only format dot separators for display purpuses if user is inputting prices
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.target;
-    const value = input.value;
-    input.value = formatIDR(value);
+    input.value = formatIDRPrice(input.value);
+  };
+
+  // Unit: hanya boleh angka dan titik/koma desimal
+  const handleUnitChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    // Izinkan angka, titik (desimal), dan koma
+    input.value = input.value.replace(/[^0-9.,]/g, '');
   };
 
   const activeStyles = "bg-indigo-500 text-white shadow-md shadow-indigo-500/20";
@@ -148,8 +170,8 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
                    type="text" 
                    name="units" 
                    required
-                   onChange={handleCurrencyChange}
-                   placeholder="Misal: 100" 
+                   onChange={handleUnitChange}
+                   placeholder="Misal: 100 atau 0.5" 
                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                  />
                </div>
@@ -160,8 +182,9 @@ export default function AddInvestmentModal({ assets, wallets }: { assets: any[],
                  <input 
                    type="text" 
                    name="price_per_unit" 
-                   onChange={handleCurrencyChange}
-                   placeholder="1.000.000" 
+                   onChange={handlePriceChange}
+                   required={activeTab === 'JUAL'}
+                   placeholder={activeTab === 'JUAL' ? '1.000.000 (wajib)' : '1.000.000'}
                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                  />
                </div>

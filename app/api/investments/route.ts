@@ -251,6 +251,13 @@ export async function DELETE(req: Request) {
             'Penghapusan ini akan membuat unit portofolio menjadi minus. Hapus transaksi penjualan terlebih dahulu.'
           );
         }
+
+        // BUG #2 FIX: Hapus fiat_transaction terkait jika ada (sama seperti JUAL)
+        if (investTx.linked_fiat_transaction_id) {
+          await ptx.fiat_transactions.delete({
+            where: { id: investTx.linked_fiat_transaction_id },
+          });
+        }
       } else if (investTx.transaction_type === 'JUAL') {
         newUnits = currentUnits.add(investTx.units);
         if (investTx.linked_fiat_transaction_id) {
@@ -260,12 +267,40 @@ export async function DELETE(req: Request) {
         }
       }
 
+      // Hapus transaksi dulu sebelum rekalkulasi
+      await ptx.asset_transactions.delete({ where: { id } });
+
+      // BUG #1 FIX: Recalculate average_buy_price dari semua transaksi BELI yang tersisa
+      let newAvgPrice = new Prisma.Decimal(0);
+      if (newUnits.gt(0)) {
+        const remainingBeli = await ptx.asset_transactions.findMany({
+          where: {
+            portfolio_id: p.id,
+            transaction_type: 'BELI',
+          },
+        });
+
+        if (remainingBeli.length > 0) {
+          // Weighted average dari transaksi BELI yang tersisa
+          let totalCost = new Prisma.Decimal(0);
+          let totalBeliUnits = new Prisma.Decimal(0);
+          for (const tx of remainingBeli) {
+            totalCost = totalCost.add(tx.units.mul(tx.price_per_unit));
+            totalBeliUnits = totalBeliUnits.add(tx.units);
+          }
+          if (totalBeliUnits.gt(0)) {
+            newAvgPrice = totalCost.div(totalBeliUnits);
+          }
+        }
+      }
+
       await ptx.user_portfolios.update({
         where: { id: p.id },
-        data: { total_units: newUnits },
+        data: {
+          total_units: newUnits,
+          average_buy_price: newAvgPrice,
+        },
       });
-
-      await ptx.asset_transactions.delete({ where: { id } });
     });
 
     return NextResponse.json(

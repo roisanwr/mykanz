@@ -139,10 +139,10 @@ export default async function PortfolioDashboardPage() {
           <div className="flex-1">
             <LiveNetWorth
               initialCash={0}
-              initialInvestment={totalPortfolioValue}
+              initialInvestment={0}
               variant="hero"
               show="investment"
-              label="Total Nilai Portofolio"
+              label="Total Nilai Portofolio (Live)"
             />
 
             {/* Stats pills */}

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useState, useRef } from "react";
@@ -8,7 +9,7 @@ import { useGSAP } from "@gsap/react";
 import { gsap } from "gsap";
 import { AlertCircle, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const errorUrl = searchParams.get("error");
 
@@ -157,5 +158,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="animate-pulse h-10 w-full bg-slate-100 rounded-md"></div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

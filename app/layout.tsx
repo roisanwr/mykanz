@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import { DM_Sans, Outfit } from 'next/font/google'
 import './globals.css'
-import { auth } from '@/lib/auth'
-import DashboardLayout from '@/components/DashboardLayout'
 import { FeedbackProvider } from '@/components/FeedbackProvider'
 import GSAPProvider from '@/components/shared/GSAPProvider'
 
@@ -43,13 +41,11 @@ const themeScript = `
   })();
 `;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const session = await auth()
-
   return (
     // suppressHydrationWarning: class 'light'/'dark' diset oleh script di atas
     // sebelum React hydrate, jadi mismatch adalah hal yang disengaja.
@@ -66,13 +62,7 @@ export default async function RootLayout({
       <body>
         <GSAPProvider>
           <FeedbackProvider>
-            {session?.user ? (
-              <DashboardLayout user={session.user}>
-                {children}
-              </DashboardLayout>
-            ) : (
-              children
-            )}
+            {children}
           </FeedbackProvider>
         </GSAPProvider>
       </body>

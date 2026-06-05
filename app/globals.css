@@ -1,4 +1,4 @@
-﻿/* ═══════════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════════
    app/globals.css
    MyKanz Design System — Anti-AI-Slop Edition v2.0
    
@@ -964,4 +964,212 @@ select.input {
 [data-tooltip]:hover::before {
   opacity:   1;
   transform: translateX(-50%) scale(1);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   PWA INSTALL BANNER
+   Muncul dari bawah, glassmorphism, brand-colored CTA
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Overlay backdrop */
+.pwa-overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 9990;
+  animation: pwa-overlay-in var(--duration-slow) var(--ease-out-expo) both;
+}
+
+/* Main banner */
+.pwa-banner {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100vw - 2rem), 420px);
+  z-index: 9991;
+
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem 1.125rem;
+
+  background-color: oklch(1 0 0 / 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid oklch(0.90 0.010 70);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 20px 40px oklch(0.35 0.02 55 / 0.18),
+    0 4px 12px  oklch(0.35 0.02 55 / 0.10),
+    0 0 0 1px  oklch(0.70 0.185 47 / 0.08);
+
+  animation: pwa-banner-in var(--duration-slow) var(--ease-spring) both;
+}
+
+.dark .pwa-banner {
+  background-color: oklch(0.22 0.018 258 / 0.92);
+  border-color: oklch(0.34 0.018 258);
+  box-shadow:
+    0 20px 40px oklch(0 0 0 / 0.45),
+    0 4px 12px  oklch(0 0 0 / 0.30),
+    0 0 0 1px  oklch(0.70 0.185 47 / 0.15);
+}
+
+/* App icon container */
+.pwa-icon-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pwa-app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+  box-shadow: 0 2px 8px oklch(0 0 0 / 0.20);
+}
+
+.pwa-icon-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-brand-500);
+  color: white;
+  border-radius: var(--radius-full);
+  border: 2px solid white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark .pwa-icon-badge {
+  border-color: oklch(0.22 0.018 258);
+}
+
+/* Text content */
+.pwa-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.pwa-title {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 2px;
+  letter-spacing: -0.01em;
+}
+
+.pwa-desc {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Install CTA button */
+.pwa-install-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.875rem;
+  background: var(--color-brand-500);
+  color: white;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px oklch(0.70 0.185 47 / 0.40);
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    transform        var(--duration-fast) var(--ease-spring),
+    box-shadow       var(--duration-fast) var(--ease-out-expo);
+}
+.pwa-install-btn:hover {
+  background: var(--color-brand-600);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px oklch(0.70 0.185 47 / 0.50);
+}
+.pwa-install-btn:active {
+  transform: scale(0.97);
+}
+.pwa-install-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Close/dismiss button */
+.pwa-close-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text-tertiary);
+  transition:
+    background-color var(--duration-fast) var(--ease-out-expo),
+    color            var(--duration-fast) var(--ease-out-expo),
+    transform        var(--duration-fast) var(--ease-spring);
+  z-index: 1;
+}
+.pwa-close-btn:hover {
+  background: var(--color-bg-sunken);
+  color: var(--color-text-primary);
+  transform: scale(1.1);
+}
+
+/* Loading spinner */
+.pwa-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: pwa-spin 0.7s linear infinite;
+}
+
+/* Keyframes */
+@keyframes pwa-banner-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes pwa-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pwa-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Safe area support for devices with notch */
+@supports (padding: max(0px)) {
+  .pwa-banner {
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
 }

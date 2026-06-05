@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import {
   User, Lock, Download, Trash2, Save, Eye, EyeOff,
   ShieldAlert, FileDown, CheckCircle2, Loader2, Mail, Bot, Copy, ExternalLink,
-  MessageCircle, Camera, Type
+  MessageCircle, Camera, Type, Tag
 } from 'lucide-react';
 import { useFeedback } from '@/components/FeedbackProvider';
+import GmailRulesManager from '@/components/GmailRulesManager';
 
-type Section = 'profile' | 'password' | 'export' | 'telegram' | 'gmail' | 'danger';
+type Section = 'profile' | 'password' | 'export' | 'telegram' | 'gmail' | 'gmail-rules' | 'danger';
 
 interface UserData {
   id: string;
@@ -236,6 +237,31 @@ export default function SettingsPage({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── Gmail Rules Manager Wrapper ───────────────────────────────────────────
+  // Komponen inner untuk fetch categories dan pass ke GmailRulesManager
+  function GmailRulesManagerWrapper() {
+    const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
+    const [catLoading, setCatLoading] = useState(true);
+
+    useEffect(() => {
+      fetch('/api/categories')
+        .then((res) => res.json())
+        .then((data) => {
+          // /api/categories returns { success: true, data: [...] }
+          if (Array.isArray(data?.data)) setCategories(data.data);
+          else if (Array.isArray(data)) setCategories(data);
+        })
+        .catch(() => {})
+        .finally(() => setCatLoading(false));
+    }, []);
+
+    if (catLoading) {
+      return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-orange-500" /></div>;
+    }
+
+    return <GmailRulesManager categories={categories} />;
+  }
+
   // ── Nav Items ─────────────────────────────────────────────
   const navItems: { id: Section; label: string; icon: React.ElementType; danger?: boolean }[] = [
     { id: 'profile', label: 'Edit Profil', icon: User },
@@ -243,6 +269,7 @@ export default function SettingsPage({
     { id: 'export', label: 'Export Data', icon: Download },
     { id: 'telegram', label: 'Telegram Bot', icon: Bot },
     { id: 'gmail', label: 'Gmail Connect', icon: Mail },
+    { id: 'gmail-rules', label: 'Aturan Kategori', icon: Tag },
     { id: 'danger', label: 'Hapus Akun', icon: Trash2, danger: true },
   ];
 
@@ -697,6 +724,23 @@ export default function SettingsPage({
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Aturan Kategori Gmail ── */}
+          {activeSection === 'gmail-rules' && (
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Tag className="w-4 h-4 text-orange-500" /> Aturan Kategori Otomatis
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Set aturan: jika penerima/VA/merchant cocok, langsung pakai kategori tertentu — tanpa perlu review manual.
+                </p>
+              </div>
+              <div className="p-6">
+                <GmailRulesManagerWrapper />
               </div>
             </div>
           )}

@@ -5,17 +5,22 @@
 // FIX BUG #5: Pencocokan sender diubah dari exact-match ke domain-based matching
 // FITUR: Testing Mode — jika GMAIL_TEST_MODE=true di env, subject "[TEST:MANDIRI]" dll.
 //        akan mem-bypass pencocokan sender dan langsung parse menggunakan parser yang sesuai
+// IMPROVEMENT: ParsedGmailTx diperkaya dengan fee_amount, recipient, va_number untuk split transaction
 
 import { inferCategoryHint, type CategoryHint } from '../category-matcher';
 
 export interface ParsedGmailTx {
-  source: string;           // Nama bank/e-wallet, e.g. "BCA", "GoPay"
+  source: string;            // Nama bank/e-wallet, e.g. "BCA", "GoPay"
   type: 'PEMASUKAN' | 'PENGELUARAN';
-  amount: number;           // dalam Rupiah (integer)
-  merchant: string | null;  // nama merchant/toko jika ada
-  currency: string;         // default "IDR"
-  date: Date;               // tanggal transaksi dari isi email
-  category_hint: CategoryHint; // tebakan kategori untuk fuzzy-match ke kategori user
+  amount: number;            // Nominal UTAMA dalam Rupiah (bukan total jika ada fee)
+  fee_amount?: number;       // Biaya admin/transaksi jika ada (insert terpisah)
+  fee_description?: string;  // Deskripsi biaya, e.g. "Biaya Transaksi"
+  merchant: string | null;   // Nama merchant/toko jika ada
+  recipient?: string | null; // Nama penerima VA, e.g. "SPayLater", "PLN"
+  va_number?: string | null; // Nomor VA jika ada, e.g. "89618039610856197"
+  currency: string;          // Default "IDR"
+  date: Date;                // Tanggal transaksi dari isi email
+  category_hint: CategoryHint; // Tebakan kategori untuk fuzzy-match ke kategori user
 }
 
 interface EmailParts {
@@ -211,11 +216,19 @@ function parseBCA({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 
   if (!isDebit && !isCredit) return null;
 
-  const amountMatch = body.match(/Rp\.?\s?([\d.,]+)/i) ?? subject.match(/Rp\.?\s?([\d.,]+)/i);
-  if (!amountMatch) return null;
+  // Coba ambil "Nominal" spesifik dulu, baru fallback ke regex umum
+  const nominalMatch =
+    body.match(/(?:nominal|jumlah(?:\s+transfer)?)\s*:?\s*Rp\.?\s?([\d.,]+)/i) ??
+    body.match(/Rp\.?\s?([\d.,]+)/i) ??
+    subject.match(/Rp\.?\s?([\d.,]+)/i);
+  if (!nominalMatch) return null;
 
-  const amount = parseRupiah(amountMatch[1]);
+  const amount = parseRupiah(nominalMatch[1]);
   if (isNaN(amount) || amount <= 0) return null;
+
+  // Deteksi biaya admin jika ada
+  const biayaMatch = body.match(/(?:biaya\s+admin|biaya\s+transfer|admin\s+fee)\s*:?\s*Rp\.?\s?([\d.,]+)/i);
+  const fee_amount = biayaMatch ? parseRupiah(biayaMatch[1]) : undefined;
 
   // Coba ekstrak nama merchant/tujuan
   const merchantMatch =
@@ -223,11 +236,18 @@ function parseBCA({ subject, body, date }: EmailParts): ParsedGmailTx | null {
     body.match(/(?:at|to|Merchant)\s*:\s*([^\n\r,]+)/i);
   const merchant = merchantMatch?.[1]?.trim() ?? null;
 
+  // Coba ekstrak VA number (16 digit angka)
+  const vaMatch = body.match(/\b(\d{10,20})\b/);
+  const va_number = vaMatch?.[1] ?? null;
+
   return {
     source: 'BCA',
     type: isDebit ? 'PENGELUARAN' : 'PEMASUKAN',
     amount,
+    fee_amount: fee_amount && fee_amount > 0 ? fee_amount : undefined,
+    fee_description: fee_amount && fee_amount > 0 ? 'Biaya Transfer' : undefined,
     merchant,
+    va_number,
     currency: 'IDR',
     date,
     category_hint: inferCategoryHint(merchant, 'BCA'),
@@ -294,27 +314,93 @@ function parseMandiri({ subject, body, date }: EmailParts): ParsedGmailTx | null
 
   if (!isDebit && !isCredit) return null;
 
-  // Mandiri sering pakai "Rp." atau "Rp " atau "IDR"
-  const amountMatch =
-    body.match(/Rp\.?\s?([\d.,]+)/i) ??
-    body.match(/IDR\s?([\d.,]+)/i) ??
-    subject.match(/Rp\.?\s?([\d.,]+)/i);
-  if (!amountMatch) return null;
+  // ── Ekstrak NOMINAL (bukan Total) ───────────────────────────────────────────
+  // Format email Livin' Mandiri:
+  //   Nominal Transaksi  IDR 24.313,00   ← ini yang kita mau
+  //   Biaya Transaksi    IDR 1.000,00    ← ini jadi fee_amount
+  //   Total Transaksi    IDR 25.313,00   ← JANGAN ambil ini
 
-  const amount = parseRupiah(amountMatch[1]);
+  // Coba "Nominal Transaksi" atau "Jumlah" terlebih dahulu (lebih spesifik)
+  const nominalMatch =
+    body.match(/(?:Nominal\s+Transaksi|Nominal\s+Transfer|Jumlah\s+Transaksi|Jumlah)\s+IDR\s*([\d.,]+)/i) ??
+    body.match(/(?:Nominal\s+Transaksi|Nominal\s+Transfer|Jumlah\s+Transaksi|Jumlah)\s+Rp\.?\s*([\d.,]+)/i);
+
+  // Fallback jika format berbeda: cari IDR pertama yang BUKAN di baris "Total" atau "Biaya"
+  let amountStr: string | null = null;
+  if (nominalMatch) {
+    amountStr = nominalMatch[1];
+  } else {
+    // Parse baris per baris, ambil IDR/Rp yang bukan Total/Biaya
+    const lines = body.split(/[\n\r]+/);
+    for (const line of lines) {
+      const isTotalLine = /total\s+transaksi|total\s+debit|total\s+bayar/i.test(line);
+      const isBiayaLine = /biaya\s+transaksi|biaya\s+admin|admin\s+fee|biaya\s+transfer/i.test(line);
+      if (isTotalLine || isBiayaLine) continue;
+
+      const m = line.match(/IDR\s*([\d.,]+)/i) ?? line.match(/Rp\.?\s*([\d.,]+)/i);
+      if (m) {
+        amountStr = m[1];
+        break;
+      }
+    }
+  }
+
+  if (!amountStr) return null;
+
+  const amount = parseRupiah(amountStr);
   if (isNaN(amount) || amount <= 0) return null;
 
-  const merchantMatch = body.match(/(?:kepada|ke|tujuan|merchant|beneficiary)\s*[:\-]?\s*([^\n\r,]+)/i);
-  const merchant = merchantMatch?.[1]?.trim() ?? null;
+  // ── Ekstrak Biaya Transaksi (fee) ──────────────────────────────────────────
+  const biayaMatch = body.match(
+    /(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee|Biaya\s+Transfer)\s+IDR\s*([\d.,]+)/i
+  ) ?? body.match(
+    /(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee|Biaya\s+Transfer)\s+Rp\.?\s*([\d.,]+)/i
+  );
+  const fee_amount = biayaMatch ? parseRupiah(biayaMatch[1]) : undefined;
+
+  // Ambil label biaya untuk deskripsi
+  const biayaLabel = biayaMatch
+    ? (body.match(/(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee|Biaya\s+Transfer)/i)?.[0] ?? 'Biaya Transaksi')
+    : undefined;
+
+  // ── Ekstrak Penerima & Nomor VA ────────────────────────────────────────────
+  // Format Mandiri:
+  //   Penerima
+  //   SPayLater         ← baris nama penerima
+  //   89618039610856197 ← baris nomor VA (setelah nama penerima)
+  let recipient: string | null = null;
+  let va_number: string | null = null;
+
+  const penerimaMatch = body.match(/Penerima\s*\n\s*([^\n\r\d]+?)\s*\n\s*(\d{10,20})/i);
+  if (penerimaMatch) {
+    recipient = penerimaMatch[1].trim();
+    va_number = penerimaMatch[2].trim();
+  } else {
+    // Fallback: cari pola "Penerima" diikuti teks
+    const penerimaFallback = body.match(/(?:Penerima|Tujuan|Beneficiary)\s*[:\-]?\s*([^\n\r\d,]+)/i);
+    recipient = penerimaFallback?.[1]?.trim() ?? null;
+
+    // Cari VA number 10-20 digit di body
+    const vaFallback = body.match(/\b(\d{10,20})\b/);
+    va_number = vaFallback?.[1] ?? null;
+  }
+
+  // Fallback merchant ke penerima jika ada
+  const merchantFallback = body.match(/(?:kepada|ke|tujuan|merchant|beneficiary)\s*[:\-]?\s*([^\n\r,]+)/i);
+  const merchant = merchantFallback?.[1]?.trim() ?? recipient;
 
   return {
     source: 'Mandiri',
     type: isDebit ? 'PENGELUARAN' : 'PEMASUKAN',
     amount,
+    fee_amount: fee_amount && fee_amount > 0 ? fee_amount : undefined,
+    fee_description: biayaLabel,
     merchant,
+    recipient,
+    va_number,
     currency: 'IDR',
     date,
-    category_hint: inferCategoryHint(merchant, 'Mandiri'),
+    category_hint: inferCategoryHint(merchant ?? recipient, 'Mandiri'),
   };
 }
 
@@ -350,22 +436,44 @@ function parseShopee({ subject, body, date }: EmailParts): ParsedGmailTx | null 
   const isPurchase = /pembayaran|pesanan|order|invoice|konfirmasi/i.test(subject + body);
   if (!isPurchase) return null;
 
-  const amountMatch =
+  // Ambil "Nominal Transaksi" terlebih dahulu (bukan Total)
+  const nominalMatch =
+    body.match(/(?:Nominal\s+Transaksi|Nominal)\s+IDR\s*([\d.,]+)/i) ??
     body.match(/(?:total|jumlah|grand total)\s*[:\-]?\s*Rp\.?\s?([\d.,]+)/i) ??
     body.match(/Rp\.?\s?([\d.,]+)/i);
-  if (!amountMatch) return null;
+  if (!nominalMatch) return null;
 
-  const amount = parseRupiah(amountMatch[1]);
+  const amount = parseRupiah(nominalMatch[1]);
   if (isNaN(amount) || amount <= 0) return null;
 
+  // Deteksi biaya transaksi jika ada (e.g. biaya admin Rp 1.000)
+  const biayaMatch = body.match(
+    /(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee)\s+IDR\s*([\d.,]+)/i
+  ) ?? body.match(
+    /(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee)\s+Rp\.?\s*([\d.,]+)/i
+  );
+  const fee_amount = biayaMatch ? parseRupiah(biayaMatch[1]) : undefined;
+  const biayaLabel = biayaMatch
+    ? (body.match(/(?:Biaya\s+Transaksi|Biaya\s+Admin|Admin\s+Fee)/i)?.[0] ?? 'Biaya Transaksi')
+    : undefined;
+
+  // Ekstrak penerima (SPayLater, ShopeePay, dll.)
+  const penerimaMatch = body.match(/Penerima\s*\n\s*([^\n\r\d]+?)\s*\n\s*(\d{10,20})/i);
+  const recipient = penerimaMatch?.[1]?.trim() ?? null;
+  const va_number = penerimaMatch?.[2]?.trim() ?? null;
+
   const merchantMatch = subject.match(/(?:toko|seller|dari)\s*[:\-]?\s*([^\n\r,\-]+)/i);
-  const merchant = merchantMatch?.[1]?.trim() ?? 'Shopee';
+  const merchant = merchantMatch?.[1]?.trim() ?? recipient ?? 'Shopee';
 
   return {
     source: 'Shopee',
     type: 'PENGELUARAN',
     amount,
+    fee_amount: fee_amount && fee_amount > 0 ? fee_amount : undefined,
+    fee_description: biayaLabel,
     merchant,
+    recipient,
+    va_number,
     currency: 'IDR',
     date,
     category_hint: 'belanja_online', // Shopee selalu belanja online

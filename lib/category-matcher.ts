@@ -1,6 +1,9 @@
 // lib/category-matcher.ts
 // Shared utility untuk kategori matching — dipakai oleh Gmail & Telegram bot.
 // Satu sumber kebenaran untuk logika inferensi dan fuzzy-matching kategori.
+//
+// IMPROVEMENT: Fix false positive — hapus keyword pendek ambigu ('tri', 'xl', 'air'),
+//   naikkan threshold dari 50 ke 60, tambah word-boundary check.
 
 export type CategoryHint =
   | 'makanan'
@@ -15,45 +18,49 @@ export type CategoryHint =
   | 'lainnya';
 
 // Keywords yang diasosiasikan ke setiap hint (untuk fuzzy-match ke nama kategori user)
+// CATATAN: Jangan taruh keyword < 4 huruf di sini — risiko false positive tinggi!
+// Contoh keyword bermasalah yang SUDAH DIHAPUS: 'tri', 'xl', 'air'
 const HINT_KEYWORDS: Record<string, string[]> = {
   makanan: [
     'makan', 'kuliner', 'resto', 'restaurant', 'food', 'minum', 'kopi', 'coffee',
     'cafe', 'warung', 'padang', 'nasi', 'bakso', 'soto', 'burger', 'pizza', 'ayam',
-    'seafood', 'sushi', 'minuman', 'snack', 'jajanan',
+    'seafood', 'sushi', 'minuman', 'snack', 'jajanan', 'kantin',
   ],
   transportasi: [
     'transport', 'grab', 'gojek', 'ojek', 'goride', 'gocar', 'bensin', 'bbm',
-    'parkir', 'tol', 'busway', 'krl', 'kereta', 'bus', 'taksi', 'taxi', 'bahan bakar',
+    'parkir', 'tol', 'busway', 'krl', 'kereta', 'taksi', 'taxi', 'bahan bakar',
+    'pertamina', 'spbu',
   ],
   belanja_online: [
     'belanja', 'online', 'tokopedia', 'shopee', 'lazada', 'blibli', 'bukalapak',
-    'e-commerce', 'ecommerce', 'marketplace',
+    'ecommerce', 'marketplace',
   ],
   belanja_harian: [
-    'belanja', 'harian', 'indomaret', 'alfamart', 'supermarket', 'minimarket',
-    'giant', 'carrefour', 'hypermart', 'hero', 'lottemart', 'groceries',
+    'harian', 'indomaret', 'alfamart', 'supermarket', 'minimarket',
+    'giant', 'carrefour', 'hypermart', 'lottemart', 'groceries', 'sembako',
   ],
   tagihan: [
-    'tagih', 'listrik', 'pln', 'pdam', 'air', 'telepon', 'internet', 'indihome',
-    'telkomsel', 'xl', 'tri', 'smartfren', 'iuran', 'cicilan', 'angsuran', 'kpr',
+    'tagihan', 'listrik', 'pln', 'pdam', 'telepon', 'internet', 'indihome',
+    'telkomsel', 'smartfren', 'iuran', 'cicilan', 'angsuran', 'kpr', 'bpjs',
+    'asuransi', 'pulsa',
   ],
   hiburan: [
     'hiburan', 'entertainment', 'netflix', 'spotify', 'bioskop', 'cinema', 'game',
-    'youtube', 'disney', 'steam', 'playstation', 'xbox', 'rekreasi', 'liburan',
+    'youtube', 'disney', 'steam', 'playstation', 'rekreasi', 'liburan', 'wisata',
   ],
   kesehatan: [
     'sehat', 'dokter', 'klinik', 'apotek', 'obat', 'rumah sakit', 'puskesmas',
     'vitamin', 'suplemen', 'kimia farma', 'guardian', 'century', 'medis',
   ],
   gaji: [
-    'gaji', 'salary', 'upah', 'thr', 'bonus', 'honorarium', 'pendapatan',
+    'gaji', 'salary', 'upah', 'bonus', 'honorarium', 'pendapatan',
     'pemasukan', 'transfer masuk',
   ],
   investasi: [
-    'investasi', 'saham', 'reksa', 'dana', 'deposito', 'emas', 'crypto', 'kripto',
+    'investasi', 'saham', 'reksa dana', 'deposito', 'emas', 'crypto', 'kripto',
     'obligasi', 'tabungan',
   ],
-  lainnya: ['lain', 'other', 'misc', 'umum'],
+  lainnya: ['lainnya', 'other', 'misc', 'umum'],
 };
 
 interface CategoryLike {
@@ -63,7 +70,10 @@ interface CategoryLike {
 
 /**
  * Cari kategori terbaik dari list berdasarkan hint string.
- * Return kategori dengan score tertinggi, atau null jika tidak ada yang cocok (score < 50).
+ * Return kategori dengan score tertinggi, atau null jika tidak ada yang cocok (score < 60).
+ *
+ * IMPROVEMENT: Threshold dinaikkan dari 50 ke 60, dan menggunakan word-boundary check
+ * untuk menghindari false positive seperti 'tri' matching 'Nutrisi' atau 'Listrik'.
  */
 export function findBestMatchingCategory<T extends CategoryLike>(
   categories: T[],
@@ -85,13 +95,18 @@ export function findBestMatchingCategory<T extends CategoryLike>(
       // Exact match
       score = 100;
     } else if (catLower.includes(hintLower) || hintLower.includes(catLower)) {
-      // Partial match with hint string
+      // Partial match dengan hint string (e.g. hint="makanan", kategori="pengeluaran makanan")
       score = 80;
     } else {
-      // Keyword match
+      // Word-boundary keyword match — lebih ketat dari substring biasa
+      // "listrik" match "Tagihan Listrik" ✓, tapi "tri" TIDAK match "Listrik" ✓
       for (const kw of hintKeywords) {
-        if (catLower.includes(kw)) {
-          score = 50;
+        // Escape karakter regex di keyword
+        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Gunakan word boundary \b untuk whole-word match
+        const wordBoundaryRegex = new RegExp(`\\b${escaped}\\b`, 'i');
+        if (wordBoundaryRegex.test(catLower)) {
+          score = 60;
           break;
         }
       }
@@ -103,7 +118,8 @@ export function findBestMatchingCategory<T extends CategoryLike>(
     }
   }
 
-  return bestScore >= 50 ? bestMatch : null;
+  // Threshold dinaikkan dari 50 ke 60 untuk mengurangi false positive
+  return bestScore >= 60 ? bestMatch : null;
 }
 
 /**
@@ -138,8 +154,9 @@ export function inferCategoryHint(
   // Urutan: lebih spesifik dulu
   if (/tokopedia|shopee|lazada|blibli|bukalapak/.test(text)) return 'belanja_online';
   if (/indomaret|alfamart|supermarket|hypermart|giant|carrefour|lottemart/.test(text)) return 'belanja_harian';
-  if (/grab|gojek|goride|gocar|gobus|gotrip|taxi|tol|parkir|bensin|bbm|pertamina/.test(text)) return 'transportasi';
-  if (/pln|pdam|telkom|indihome|telkomsel|xl|tri |smartfren|listrik|internet/.test(text)) return 'tagihan';
+  if (/grab|gojek|goride|gocar|gobus|gotrip|taksi|taxi|tol|parkir|bensin|bbm|pertamina/.test(text)) return 'transportasi';
+  // Catatan: 'tri' dan 'xl' DIHAPUS dari sini karena terlalu ambigus
+  if (/pln|pdam|telkom|indihome|telkomsel|smartfren|listrik|internet|pulsa|bpjs/.test(text)) return 'tagihan';
   if (/netflix|spotify|youtube|disney|bioskop|cinema|game|steam/.test(text)) return 'hiburan';
   if (/apotek|klinik|dokter|rumah sakit|puskesmas|kimia farma|guardian|century|medis/.test(text)) return 'kesehatan';
   if (/gaji|salary|transfer masuk|terima dari/.test(text)) return 'gaji';

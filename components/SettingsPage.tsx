@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import {
   User, Lock, Download, Trash2, Save, Eye, EyeOff,
   ShieldAlert, FileDown, CheckCircle2, Loader2, Mail, Bot, Copy, ExternalLink,
-  MessageCircle, Camera, Type, Tag
+  MessageCircle, Camera, Type, Tag, Smartphone
 } from 'lucide-react';
+import PWAInstallSection from '@/components/PWAInstallSection';
 import { useFeedback } from '@/components/FeedbackProvider';
 import GmailRulesManager from '@/components/GmailRulesManager';
 
-type Section = 'profile' | 'password' | 'export' | 'telegram' | 'gmail' | 'gmail-rules' | 'danger';
+type Section = 'profile' | 'password' | 'export' | 'telegram' | 'gmail' | 'gmail-rules' | 'install' | 'danger';
 
 interface UserData {
   id: string;
@@ -270,6 +271,7 @@ export default function SettingsPage({
     { id: 'telegram', label: 'Telegram Bot', icon: Bot },
     { id: 'gmail', label: 'Gmail Connect', icon: Mail },
     { id: 'gmail-rules', label: 'Aturan Kategori', icon: Tag },
+    { id: 'install', label: 'Install Aplikasi', icon: Smartphone },
     { id: 'danger', label: 'Hapus Akun', icon: Trash2, danger: true },
   ];
 
@@ -741,6 +743,21 @@ export default function SettingsPage({
               </div>
               <div className="p-6">
                 <GmailRulesManagerWrapper />
+              </div>
+            </div>
+          )}
+
+          {/* ── Install Aplikasi ── */}
+          {activeSection === 'install' && (
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm overflow-hidden">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h2 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-orange-500" /> Install Aplikasi
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Tambahkan MyKanz ke homescreen HP-mu untuk akses lebih cepat.</p>
+              </div>
+              <div className="p-6">
+                <PWAInstallSection />
               </div>
             </div>
           )}

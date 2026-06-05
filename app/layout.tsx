@@ -3,7 +3,6 @@ import { DM_Sans, Outfit } from 'next/font/google'
 import './globals.css'
 import { FeedbackProvider } from '@/components/FeedbackProvider'
 import GSAPProvider from '@/components/shared/GSAPProvider'
-import PWAInstallPrompt from '@/components/PWAInstallPrompt'
 
 // DM Sans — body font: readable, modern, NOT overused like Inter
 const dmSans = DM_Sans({
@@ -87,7 +86,6 @@ export default function RootLayout({
         <GSAPProvider>
           <FeedbackProvider>
             {children}
-            <PWAInstallPrompt />
           </FeedbackProvider>
         </GSAPProvider>
       </body>

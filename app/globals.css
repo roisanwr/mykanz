@@ -1073,6 +1073,14 @@ select.input {
   line-height: 1.45;
 }
 
+.pwa-desc-strong {
+  color: var(--color-brand-600);
+  font-weight: 700;
+}
+.dark .pwa-desc-strong {
+  color: var(--color-brand-400);
+}
+
 /* Install CTA button */
 .pwa-install-btn {
   flex-shrink: 0;

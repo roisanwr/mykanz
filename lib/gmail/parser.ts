@@ -309,8 +309,16 @@ function parseOVO({ subject, body, date }: EmailParts): ParsedGmailTx | null {
 
 function parseMandiri({ subject, body, date }: EmailParts): ParsedGmailTx | null {
   const combined = subject + ' ' + body;
-  const isDebit = /debit|pembayaran|transfer keluar|pembelian|keluar/i.test(combined);
-  const isCredit = /kredit|transfer masuk|terima|masuk/i.test(combined);
+
+  // FIX: "Transfer Berhasil" dan kehadiran "Penerima" di body = pasti DEBIT (keluar)
+  // "terima" dihapus dari regex kredit — terlalu generik, cocok ke "Terima kasih"
+  // "masuk" sendiri juga dihapus — bisa false positive pada kata lain
+  const hasExplicitPenerima = /\bPenerima\b/i.test(body);
+  const isDebit =
+    hasExplicitPenerima ||
+    /debit|pembayaran|transfer\s+berhasil|transfer\s+keluar|pembelian|keluar/i.test(combined);
+  const isCredit =
+    /kredit|transfer\s+masuk|saldo\s+masuk|masuk\s+ke\s+rekening/i.test(combined);
 
   if (!isDebit && !isCredit) return null;
 
@@ -371,23 +379,41 @@ function parseMandiri({ subject, body, date }: EmailParts): ParsedGmailTx | null
   let recipient: string | null = null;
   let va_number: string | null = null;
 
-  const penerimaMatch = body.match(/Penerima\s*\n\s*([^\n\r\d]+?)\s*\n\s*(\d{10,20})/i);
-  if (penerimaMatch) {
-    recipient = penerimaMatch[1].trim();
-    va_number = penerimaMatch[2].trim();
+  // FIX: Format Mandiri → nama penerima lalu baris berikutnya bisa berupa:
+  //   a) Nomor VA murni:  "89618039610856197"
+  //   b) Nama bank + no rekening: "Bank Mandiri - 1570006217393"
+  // Kedua format ditangani di sini.
+  const penerimaLineMatch =
+    // Format a: baris berikutnya = 10–20 digit murni
+    body.match(/Penerima\s*[\n\r]+\s*([^\n\r\d]+?)\s*[\n\r]+\s*(\d{10,20})\s*(?:[\n\r]|$)/i) ??
+    // Format b: baris berikutnya mengandung nama bank lalu " - <nomor>"
+    body.match(/Penerima\s*[\n\r]+\s*([^\n\r\d]+?)\s*[\n\r]+\s*(?:Bank\s+[^\n\r]+?[-–]\s*)?(\d{8,20})/i);
+
+  if (penerimaLineMatch) {
+    recipient = penerimaLineMatch[1].trim();
+    va_number = penerimaLineMatch[2].trim();
   } else {
-    // Fallback: cari pola "Penerima" diikuti teks
+    // Fallback: ambil nama setelah kata "Penerima"
     const penerimaFallback = body.match(/(?:Penerima|Tujuan|Beneficiary)\s*[:\-]?\s*([^\n\r\d,]+)/i);
     recipient = penerimaFallback?.[1]?.trim() ?? null;
 
-    // Cari VA number 10-20 digit di body
+    // Cari nomor VA / rekening (10-20 digit) di body
     const vaFallback = body.match(/\b(\d{10,20})\b/);
     va_number = vaFallback?.[1] ?? null;
   }
 
-  // Fallback merchant ke penerima jika ada
-  const merchantFallback = body.match(/(?:kepada|ke|tujuan|merchant|beneficiary)\s*[:\-]?\s*([^\n\r,]+)/i);
-  const merchant = merchantFallback?.[1]?.trim() ?? recipient;
+  // FIX: "ke" terlalu pendek — cocok di dalam kata "Ke-terangan", "Ke-napa", dll.
+  // Ganti dengan word-boundary (\bke\b) dan tambahkan alternatif yang lebih aman.
+  const merchantFallback = body.match(
+    /(?:kepada|\bke\b|tujuan|merchant|beneficiary)\s*[:\-]?\s*([^\n\r,]+)/i
+  );
+  // Jika fallback masih tidak ditemukan atau hasilnya mengandung boilerplate footer,
+  // gunakan recipient yang sudah diekstrak dari blok "Penerima".
+  const merchantRaw = merchantFallback?.[1]?.trim();
+  const isBoilerplate = merchantRaw
+    ? /PT Bank|OJK|Bank Indonesia|bertransaksi di|Terima kasih/i.test(merchantRaw)
+    : true;
+  const merchant = (!isBoilerplate && merchantRaw) ? merchantRaw : recipient;
 
   return {
     source: 'Mandiri',

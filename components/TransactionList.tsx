@@ -210,7 +210,7 @@ export default function TransactionList({ transactions }: { transactions: FiatTr
         const walletFrom = tx.wallets_fiat_transactions_wallet_idTowallets?.name;
         const walletTo   = tx.wallets_fiat_transactions_to_wallet_idTowallets?.name;
         const dateLine   = new Date(tx.transaction_date ?? new Date())
-          .toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+          .toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Jakarta' });
 
         let subtitle = dateLine;
         if (type === 'PEMASUKAN')   subtitle += ` · Ke: ${walletFrom}`;

@@ -152,7 +152,7 @@ export default function LiveNetWorth({
           <>
             <span className="w-px h-3 opacity-30" style={{ backgroundColor: 'oklch(0.85 0 0)' }} />
             <span className="text-[10px]" style={{ color: 'oklch(0.55 0.03 55)' }}>
-              {new Date(updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              {new Date(updatedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}
             </span>
           </>
         )}

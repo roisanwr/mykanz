@@ -168,7 +168,7 @@ export default function WalletCardActions({ wallet, isDefault = false }: { walle
                           </div>
                           <div>
                             <p className="text-sm font-bold text-slate-900 dark:text-white">{tx.category !== '-' ? tx.category : tx.typeLabel}</p>
-                            <p className="text-xs text-slate-500">{new Date(tx.date).toLocaleDateString('id-ID')}</p>
+                            <p className="text-xs text-slate-500">{new Date(tx.date).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })}</p>
                           </div>
                         </div>
                         <div className="text-right">

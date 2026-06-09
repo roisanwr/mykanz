@@ -140,7 +140,7 @@ export default function AssignTransactionToEventModal({ eventId }: { eventId: st
                           {tx.categories?.name || 'Transaksi'} {tx.event_id && <span className="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300 ml-1">Sudah di event lain</span>}
                         </p>
                         <p className="text-xs text-slate-500">
-                          {new Date(tx.transaction_date ?? new Date()).toLocaleDateString('id-ID')} • {tx.wallets_fiat_transactions_wallet_idTowallets.name}
+                          {new Date(tx.transaction_date ?? new Date()).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' })} • {tx.wallets_fiat_transactions_wallet_idTowallets.name}
                         </p>
                       </div>
                     </div>

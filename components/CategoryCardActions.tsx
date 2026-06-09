@@ -314,7 +314,7 @@ export default function CategoryCardActions({ category }: { category: any }) {
                              {tx.description || category.name}
                            </p>
                            <p className="text-xs text-slate-500 mt-1">
-                             {new Date(tx.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} • {tx.wallets_fiat_transactions_wallet_idTowallets?.name}
+                             {new Date(tx.transaction_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' })} • {tx.wallets_fiat_transactions_wallet_idTowallets?.name}
                            </p>
                          </div>
                       </div>

@@ -131,7 +131,8 @@ export default function InvestmentTransactionList({ transactions }: { transactio
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                   <p>
                     {new Date(tx.transaction_date).toLocaleDateString('id-ID', { 
-                      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                      timeZone: 'Asia/Jakarta'
                     })}
                   </p>
                   <p className="hidden sm:block">•</p>
